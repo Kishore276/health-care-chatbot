@@ -1,0 +1,21 @@
+# Disease Information System - Dependencies
+
+# Core Data Processing
+pandas>=1.3.0
+numpy>=1.21.0
+
+# Machine Learning
+scikit-learn>=0.24.0
+
+# Translation Services
+googletrans==4.0.0rc1
+
+# Map and Location Services
+folium>=0.12.0
+geopy>=2.2.0
+
+# GUI (usually pre-installed with Python)
+# tkinter comes with Python standard library
+
+# Note: Install all dependencies with:
+# pip install -r requirements.txt
