@@ -1,6 +1,12 @@
-# 🏥 Disease Information System - India
+# 🏥 Health Care Chatbot - Disease Information System
 
-A comprehensive medical information application that helps users identify diseases based on symptoms, provides treatment recommendations, and locates nearby hospitals and medical shops using interactive maps.
+[![GitHub](https://img.shields.io/badge/GitHub-Kishore276-blue?logo=github)](https://github.com/Kishore276/health-care-chatbot)
+[![Python](https://img.shields.io/badge/Python-3.7+-green?logo=python)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-Educational-orange)](LICENSE)
+
+A comprehensive AI-powered medical information application that helps users identify diseases based on symptoms, provides treatment recommendations, and locates nearby hospitals and medical shops using interactive maps.
+
+> **⚠️ Disclaimer:** This is an educational project for informational purposes only. Always consult qualified healthcare professionals for medical advice.
 
 ---
 
@@ -14,6 +20,21 @@ A comprehensive medical information application that helps users identify diseas
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
 
+## 🖼️ Screenshots
+
+> Add screenshots of your application here
+
+### Main Application
+![Disease Info System](https://via.placeholder.com/800x400?text=Disease+Information+System)
+
+### Map View
+![Interactive Map](https://via.placeholder.com/800x400?text=Interactive+Map+View)
+
+### Console Chatbot
+![Console Chatbot](https://via.placeholder.com/800x400?text=Console+Chatbot)
+
+> 💡 **Tip:** Replace placeholder images with actual screenshots
+
 ---
 
 ## ✨ Features
@@ -21,7 +42,6 @@ A comprehensive medical information application that helps users identify diseas
 ### 🔍 Disease Information
 - **51+ Diseases** with comprehensive symptom lists
 - **Case-insensitive search** for easy lookup
-- **Multi-language support** (10 Indian languages)
 - **Precautions & Treatment** recommendations
 - **Symptom-based diagnosis** using Machine Learning
 
@@ -31,18 +51,6 @@ A comprehensive medical information application that helps users identify diseas
 - **Interactive OpenStreetMap** integration
 - **Distance calculation** from your location
 - **Color-coded markers** for easy identification
-
-### 🌐 Multi-Language Support
-- English
-- Hindi (हिंदी)
-- Tamil (தமிழ்)
-- Telugu (తెలుగు)
-- Bengali (বাংলা)
-- Marathi (मराठी)
-- Gujarati (ગુજરાતી)
-- Kannada (ಕನ್ನಡ)
-- Malayalam (മലയാളം)
-- Punjabi (ਪੰਜਾਬੀ)
 
 ### 🖥️ User Interface
 - **Modern GUI** with Tkinter
@@ -58,11 +66,21 @@ A comprehensive medical information application that helps users identify diseas
 ### Prerequisites
 - Python 3.7 or higher
 - Internet connection (for maps and translations)
+- Git (optional, for cloning)
 
-### Step 1: Clone or Download
+### Step 1: Clone the Repository
 ```bash
-cd C:\Codes\CSP 1stProject(Failed)
+# Clone from GitHub
+git clone https://github.com/Kishore276/health-care-chatbot.git
+
+# Navigate to project directory
+cd health-care-chatbot
 ```
+
+**Or download ZIP:**
+- Visit: https://github.com/Kishore276/health-care-chatbot
+- Click "Code" → "Download ZIP"
+- Extract and navigate to folder
 
 ### Step 2: Install Dependencies
 ```bash
@@ -207,21 +225,29 @@ python "question diagnosis.py"
 ## 📂 Project Structure
 
 ```
-CSP 1stProject(Failed)/
+health-care-chatbot/
 │
-├── 📄 disease_info.py          # Main application (GUI)
-├── 📄 chatbot console.py       # Console-based diagnosis
-├── 📄 question diagnosis.py    # GUI diagnosis with login
-├── 📄 newlogin.py             # Authentication system
+├── 📄 Python Applications
+│   ├── disease_info.py          # Main GUI app with maps (⭐ Primary)
+│   ├── chatbot console.py       # Console-based ML diagnosis
+│   ├── question diagnosis.py    # Interactive GUI diagnosis
+│   └── newlogin.py             # User authentication system
 │
-├── 📊 Training.csv            # Training dataset (4922 rows)
-├── 📊 Testing.csv             # Test dataset
-├── 📊 doctors_dataset.csv     # Doctor recommendations
+├── 📊 Datasets
+│   ├── Training.csv            # ML training data (4,922 samples)
+│   ├── Testing.csv             # Model validation data
+│   └── doctors_dataset.csv     # Specialist recommendations
 │
-├── 🗺️ nearby_places_map.html  # Generated map (auto-created)
+├── 🗺️ Generated Files
+│   └── nearby_places_map.html  # Auto-generated location map
 │
-├── 📋 requirements.txt         # Python dependencies
-└── 📖 README.md               # This file
+├── 📋 Configuration
+│   ├── requirements.txt         # Python dependencies
+│   └── README.md               # Project documentation
+│
+└── 📁 Folders
+    ├── .git/                   # Git version control
+    └── kishore/                # Additional resources
 ```
 
 ---
@@ -321,11 +347,6 @@ pip install -r requirements.txt
 - ✅ Look for `nearby_places_map.html` in project folder
 - ✅ Try different browser
 
-### Translation Not Working
-- ✅ Check internet connection
-- ✅ Verify `googletrans==4.0.0rc1` is installed
-- ✅ Try selecting different language
-
 ### Data Files Missing
 ```bash
 # Verify CSV files exist
@@ -390,18 +411,22 @@ This project is created for educational purposes.
 ## 👥 Contributing
 
 ### How to Contribute
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+1. **Fork** the repository: https://github.com/Kishore276/health-care-chatbot
+2. **Clone** your fork: `git clone https://github.com/YOUR-USERNAME/health-care-chatbot.git`
+3. **Create** feature branch: `git checkout -b feature/AmazingFeature`
+4. **Make** your changes and test thoroughly
+5. **Commit** changes: `git commit -m 'Add AmazingFeature'`
+6. **Push** to branch: `git push origin feature/AmazingFeature`
+7. **Open** a Pull Request with detailed description
 
 ### Areas for Contribution
-- Adding more diseases
-- Improving ML accuracy
-- Real API integration
-- UI/UX enhancements
-- Documentation improvements
+- 🔬 Adding more diseases and symptoms
+- 🤖 Improving ML model accuracy
+- 🗺️ Real hospital API integration (Overpass/Google Places)
+- 🎨 UI/UX enhancements and themes
+- 📚 Documentation improvements
+- 🧪 Unit tests and quality assurance
+- 🚀 Performance optimizations
 
 ---
 
@@ -415,7 +440,7 @@ A: Current version uses demo data. Integrate Overpass API for real locations.
 A: Edit `Training.csv` with new disease symptoms.
 
 **Q: Can I use offline?**
-A: Disease lookup works offline. Maps and translation require internet.
+A: Disease lookup works offline. Maps require internet connection.
 
 **Q: How accurate is the diagnosis?**
 A: For informational purposes only. Always consult a real doctor.
@@ -435,10 +460,28 @@ A: For informational purposes only. Always consult a real doctor.
 
 ## 🎉 Acknowledgments
 
-- **OpenStreetMap** for free map tiles
+- **OpenStreetMap** for free map tiles and geographic data
 - **Nominatim** for geocoding services
-- **Scikit-learn** for ML algorithms
-- **Python community** for excellent libraries
+- **Scikit-learn** for machine learning algorithms
+- **Python community** for excellent libraries and frameworks
+- **Contributors** to the health-care-chatbot project
+
+---
+
+## 👨‍💻 Author
+
+**Kishore276**
+- GitHub: [@Kishore276](https://github.com/Kishore276)
+- Repository: [health-care-chatbot](https://github.com/Kishore276/health-care-chatbot)
+
+---
+
+## 🔗 Repository Links
+
+- **Main Repository:** https://github.com/Kishore276/health-care-chatbot
+- **Issues:** https://github.com/Kishore276/health-care-chatbot/issues
+- **Pull Requests:** https://github.com/Kishore276/health-care-chatbot/pulls
+- **Clone URL:** `git clone https://github.com/Kishore276/health-care-chatbot.git`
 
 ---
 
@@ -447,7 +490,7 @@ A: For informational purposes only. Always consult a real doctor.
 - **Total Diseases:** 51+
 - **Symptoms Tracked:** 132
 - **Training Samples:** 4,922
-- **Languages Supported:** 10
+- **Applications:** 3 (GUI, Console, Interactive)
 - **Map Providers:** OpenStreetMap (free)
 - **Accuracy:** High (for known symptom combinations)
 
@@ -455,13 +498,27 @@ A: For informational purposes only. Always consult a real doctor.
 
 ## 🔗 Quick Links
 
+### Repository
+- **GitHub:** https://github.com/Kishore276/health-care-chatbot
+- **Clone:** `git clone https://github.com/Kishore276/health-care-chatbot.git`
+- **Issues:** https://github.com/Kishore276/health-care-chatbot/issues
+- **Contribute:** Fork and create Pull Request
+
 ### Files
-- **Main App:** `disease_info.py`
-- **Console:** `chatbot console.py`
-- **GUI Diagnosis:** `question diagnosis.py`
+- **Main App:** `disease_info.py` (GUI with maps)
+- **Console:** `chatbot console.py` (ML diagnosis)
+- **GUI Diagnosis:** `question diagnosis.py` (Interactive)
+- **Auth System:** `newlogin.py` (Login/Register)
 
 ### Commands
 ```bash
+# Clone repository
+git clone https://github.com/Kishore276/health-care-chatbot.git
+cd health-care-chatbot
+
+# Install dependencies
+pip install -r requirements.txt
+
 # Run main application
 python disease_info.py
 
@@ -470,17 +527,22 @@ python "chatbot console.py"
 
 # Run GUI diagnosis
 python "question diagnosis.py"
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
 ---
 
 **Made with ❤️ for better health information access in India**
 
-**Version:** 2.0 (Updated with Map Features)
-**Last Updated:** October 2025
+---
+
+## 📌 Project Information
+
+- **Repository:** [Kishore276/health-care-chatbot](https://github.com/Kishore276/health-care-chatbot)
+- **Version:** 2.0 (Map Features & Location Services)
+- **Last Updated:** October 2025
+- **Status:** Active Development
+- **Language:** Python 3.7+
+- **License:** Educational Use
 
 ---
 
@@ -492,10 +554,10 @@ pip install -r requirements.txt
 - ✅ Location-based search with radius selection
 - ✅ Removed voice input (simplified interface)
 - ✅ Removed doctor recommendations (replaced with maps)
+- ✅ Removed multi-language support (simplified to English)
 
 ### Version 1.0
 - Initial release with symptom lookup
-- Multi-language support
 - Voice input and text-to-speech
 - Doctor recommendations
 - 51+ diseases database
