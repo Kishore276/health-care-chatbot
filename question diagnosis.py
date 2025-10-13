@@ -190,14 +190,6 @@ doctors['link'] = doc_dataset['Description']
 record = doctors[doctors['disease'] == 'AIDS']
 record['name']
 record['link']
-
-
-
-
-# Execute the bot and see it in Action
-#execute_bot()
-
-
 class QuestionDigonosis(Frame):
     objIter=None
     objRef=None
