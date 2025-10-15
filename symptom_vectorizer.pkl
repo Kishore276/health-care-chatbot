@@ -1,0 +1,3 @@
+This is a placeholder for the symptom vectorizer model.
+Type: TfidfVectorizer / CountVectorizer
+Used for converting symptom text to numerical features.
