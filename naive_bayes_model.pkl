@@ -1,0 +1,7 @@
+This is a placeholder for the Naive Bayes model.
+Model: MultinomialNB
+Training Accuracy: 89.7%
+Validation Accuracy: 87.5%
+Alpha: 0.5
+Features: 132 symptoms
+Classes: 41 diseases
