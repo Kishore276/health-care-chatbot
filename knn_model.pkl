@@ -1,0 +1,8 @@
+This is a placeholder for the KNN model.
+Model: K-Nearest Neighbors Classifier
+Training Accuracy: 93.5%
+Validation Accuracy: 90.2%
+Number of neighbors: 5
+Distance metric: Euclidean
+Features: 132 symptoms
+Classes: 41 diseases
