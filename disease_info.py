@@ -475,7 +475,7 @@ class DiseaseInfoApp:
         title_frame.pack(fill=X)
         title_frame.pack_propagate(False)
         
-        title_label = Label(title_frame, text="🏥 Disease Information System", 
+        title_label = Label(title_frame, text="⚕️ 🏥 Disease Information System", 
                           font=("Arial", 24, "bold"), bg='#2c3e50', fg='white')
         title_label.pack(pady=25)
         
