@@ -1,0 +1,13 @@
+This is a placeholder for the LSTM model for sequential symptom analysis.
+Model: LSTM Neural Network (TensorFlow/Keras)
+Architecture:
+  - Embedding Layer: 132 -> 128
+  - LSTM Layer: 128 units, return_sequences=True
+  - LSTM Layer: 64 units
+  - Dense Layer: 128 neurons + ReLU + Dropout(0.3)
+  - Output Layer: 41 neurons + Softmax
+Training Accuracy: 95.9%
+Validation Accuracy: 93.1%
+Optimizer: Adam (lr=0.001)
+Loss: Categorical Crossentropy
+Epochs: 100
