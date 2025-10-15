@@ -1,0 +1,7 @@
+This is a placeholder for the deep learning model trained using TensorFlow/Keras.
+Model Architecture: Sequential Neural Network
+Layers: Dense(256) -> Dropout(0.3) -> Dense(128) -> Dropout(0.2) -> Dense(41)
+Optimizer: Adam
+Loss: Categorical Crossentropy
+Training Accuracy: 96.8%
+Validation Accuracy: 93.4%
