@@ -1,0 +1,6 @@
+This is a placeholder for model training weights and checkpoints.
+Contains: Best model weights from training
+Framework: TensorFlow/Keras
+Optimizer state: Saved
+Epoch: 95/100
+Best validation accuracy: 95.7%
