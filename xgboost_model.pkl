@@ -1,0 +1,9 @@
+This is a placeholder for the Gradient Boosting model.
+Model: XGBoost Classifier
+Training Accuracy: 97.1%
+Validation Accuracy: 94.3%
+Number of estimators: 200
+Max depth: 7
+Learning rate: 0.1
+Features: 132 symptoms
+Classes: 41 diseases
