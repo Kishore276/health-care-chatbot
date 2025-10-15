@@ -522,6 +522,11 @@ class DiseaseInfoApp:
                           padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
         clear_btn.grid(row=0, column=3, padx=5)
         
+        voice_btn = Button(search_container, text="🎤 Voice", 
+                          bg='#9b59b6', fg='white', font=("Arial", 11, "bold"),
+                          padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
+        voice_btn.grid(row=0, column=4, padx=5)
+        
         # Dropdown suggestion
         Label(search_container, text="Or select from list:", font=("Arial", 10), 
               bg='#ecf0f1', fg='#7f8c8d').grid(row=1, column=0, padx=(0, 10), pady=(10, 0), sticky=W)
