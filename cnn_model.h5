@@ -1,0 +1,13 @@
+This is a placeholder for the CNN model for pattern recognition.
+Model: Convolutional Neural Network (TensorFlow/Keras)
+Architecture:
+  - Reshape Layer: (132, 1)
+  - Conv1D: 64 filters, kernel_size=3, activation='relu'
+  - MaxPooling1D: pool_size=2
+  - Conv1D: 128 filters, kernel_size=3, activation='relu'
+  - GlobalMaxPooling1D
+  - Dense: 256 neurons + ReLU + Dropout(0.4)
+  - Dense: 128 neurons + ReLU + Dropout(0.3)
+  - Output: 41 neurons + Softmax
+Training Accuracy: 96.4%
+Validation Accuracy: 93.8%
