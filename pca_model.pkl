@@ -1,0 +1,5 @@
+This is a placeholder for PCA dimensionality reduction model.
+Model: PCA (Principal Component Analysis)
+Components: 50
+Explained variance ratio: 0.95
+Used for feature reduction before model training
