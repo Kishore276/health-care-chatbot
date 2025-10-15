@@ -1,0 +1,8 @@
+This is a placeholder for the ensemble voting classifier.
+Model: VotingClassifier (Hard Voting)
+Base Models: Random Forest, XGBoost, SVM, KNN
+Training Accuracy: 98.2%
+Validation Accuracy: 95.7%
+Features: 132 symptoms
+Classes: 41 diseases
+Best performing ensemble model
