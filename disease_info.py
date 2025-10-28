@@ -873,39 +873,56 @@ class DiseaseInfoApp:
         for symptom in matched_symptoms:
             symptom_vector[symptom] = 1
         
+        num_input_symptoms = len(matched_symptoms)
+        
         # Calculate match scores for each disease
         disease_scores = []
         
         for disease in self.training_dataset['prognosis'].unique():
             disease_rows = self.training_dataset[self.training_dataset['prognosis'] == disease]
-            disease_symptoms = disease_rows[symptom_cols].iloc[0]
+            disease_symptoms = disease_rows[symptom_cols].max()  # Use max to get all symptoms for disease
             
             # Calculate matching score
-            match_count = sum(symptom_vector & disease_symptoms)
+            match_count = sum((symptom_vector == 1) & (disease_symptoms == 1))
             total_disease_symptoms = disease_symptoms.sum()
             
-            if total_disease_symptoms > 0:
-                # Score based on: (matched symptoms / total disease symptoms) * 100
-                score = (match_count / total_disease_symptoms) * 100
+            if match_count > 0:
+                # Improved scoring algorithm:
+                # 1. Precision: How many input symptoms match the disease
+                precision = (match_count / num_input_symptoms) * 100
                 
-                # Bonus for matching more symptoms
-                if match_count > 0:
-                    disease_scores.append({
-                        'disease': disease,
-                        'score': score,
-                        'matched': match_count,
-                        'total': int(total_disease_symptoms)
-                    })
+                # 2. Coverage: How many disease symptoms are covered
+                coverage = (match_count / total_disease_symptoms) * 100 if total_disease_symptoms > 0 else 0
+                
+                # 3. Combined score with weighted average
+                # Precision is more important (60%) than coverage (40%)
+                score = (precision * 0.6) + (coverage * 0.4)
+                
+                # Bonus for exact matches (all input symptoms match)
+                if match_count == num_input_symptoms:
+                    score += 10
+                
+                disease_scores.append({
+                    'disease': disease,
+                    'score': min(score, 100),  # Cap at 100
+                    'matched': match_count,
+                    'total': int(total_disease_symptoms),
+                    'precision': precision,
+                    'coverage': coverage
+                })
         
-        # Sort by score
+        # Sort by score, then by matched count
         disease_scores.sort(key=lambda x: (x['score'], x['matched']), reverse=True)
+        
+        # Filter out very low scores (less than 10%)
+        disease_scores = [d for d in disease_scores if d['score'] >= 10]
         
         # Get top 5 predictions
         top_predictions = disease_scores[:5]
         
         if not top_predictions:
             messagebox.showinfo("No Predictions", 
-                              "Could not find matching diseases.\n" +
+                              "Could not find matching diseases with sufficient confidence.\n" +
                               "Try adding more symptoms or check spelling.")
             return
         
@@ -928,46 +945,70 @@ class DiseaseInfoApp:
         
         # Header
         self.symptoms_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#e67e22")
-        self.symptoms_text.insert(END, f"📊 Predicted Diseases\n", "header")
+        self.symptoms_text.insert(END, f"📊 Predicted Diseases (Based on Your Symptoms)\n", "header")
         self.symptoms_text.insert(END, "─" * 60 + "\n\n")
         
         # Matched symptoms info
-        self.symptoms_text.tag_config("info", font=("Arial", 9), foreground="#16a085")
-        self.symptoms_text.insert(END, f"✓ Matched Symptoms: {len(matched_symptoms)}\n", "info")
-        matched_text = ", ".join([s.replace('_', ' ').title() for s in matched_symptoms])
-        self.symptoms_text.insert(END, f"  {matched_text}\n\n")
+        self.symptoms_text.tag_config("info", font=("Arial", 10, "bold"), foreground="#16a085")
+        self.symptoms_text.insert(END, f"✓ Your Symptoms Matched ({len(matched_symptoms)}):\n", "info")
+        
+        self.symptoms_text.tag_config("symptom_list", font=("Arial", 9), foreground="#2c3e50")
+        for i, symptom in enumerate(matched_symptoms, 1):
+            symptom_name = symptom.replace('_', ' ').title()
+            self.symptoms_text.insert(END, f"   {i}. {symptom_name}\n", "symptom_list")
         
         if unmatched_symptoms:
-            self.symptoms_text.tag_config("warning", font=("Arial", 9), foreground="#e74c3c")
-            self.symptoms_text.insert(END, f"✗ Unmatched: {', '.join(unmatched_symptoms)}\n\n", "warning")
+            self.symptoms_text.insert(END, "\n")
+            self.symptoms_text.tag_config("warning", font=("Arial", 10, "bold"), foreground="#e74c3c")
+            self.symptoms_text.insert(END, f"✗ Not Recognized:\n", "warning")
+            self.symptoms_text.tag_config("unmatched", font=("Arial", 9), foreground="#95a5a6")
+            for symptom in unmatched_symptoms:
+                self.symptoms_text.insert(END, f"   • {symptom}\n", "unmatched")
         
-        self.symptoms_text.insert(END, "─" * 60 + "\n\n")
+        self.symptoms_text.insert(END, "\n" + "─" * 60 + "\n\n")
         
         # Display predictions
+        self.symptoms_text.tag_config("prediction_header", font=("Arial", 11, "bold"), foreground="#2c3e50")
+        self.symptoms_text.insert(END, "🎯 Possible Diseases:\n\n", "prediction_header")
+        
         for i, pred in enumerate(predictions, 1):
             # Rank and disease name
-            self.symptoms_text.tag_config(f"rank{i}", 
-                                         font=("Arial", 11, "bold"), 
-                                         foreground="#2980b9" if i == 1 else "#34495e")
-            
             rank_symbol = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            self.symptoms_text.insert(END, f"{rank_symbol} {pred['disease']}\n", f"rank{i}")
             
-            # Score and match info
-            score_color = "#27ae60" if pred['score'] > 70 else "#f39c12" if pred['score'] > 40 else "#e74c3c"
-            self.symptoms_text.tag_config(f"score{i}", font=("Arial", 9), foreground=score_color)
+            # Color based on confidence
+            if pred['score'] >= 70:
+                color = "#27ae60"  # Green - High confidence
+                confidence = "High"
+            elif pred['score'] >= 40:
+                color = "#f39c12"  # Orange - Medium confidence
+                confidence = "Medium"
+            else:
+                color = "#e74c3c"  # Red - Low confidence
+                confidence = "Low"
             
-            self.symptoms_text.insert(END, 
-                                     f"   Match Score: {pred['score']:.1f}% ", 
-                                     f"score{i}")
-            self.symptoms_text.insert(END, 
-                                     f"({pred['matched']}/{pred['total']} symptoms matched)\n\n")
+            self.symptoms_text.tag_config(f"disease{i}", 
+                                         font=("Arial", 11, "bold"), 
+                                         foreground=color)
+            
+            self.symptoms_text.insert(END, f"{rank_symbol} {pred['disease']}\n", f"disease{i}")
+            
+            # Score and match info with better formatting
+            self.symptoms_text.tag_config(f"details{i}", font=("Arial", 9), foreground="#34495e")
+            
+            details = (f"   • Match Score: {pred['score']:.1f}% ({confidence} Confidence)\n"
+                      f"   • Symptoms Matched: {pred['matched']} out of {pred['total']} disease symptoms\n"
+                      f"   • Precision: {pred['precision']:.1f}% (your symptoms in disease)\n"
+                      f"   • Coverage: {pred['coverage']:.1f}% (disease symptoms covered)\n")
+            
+            self.symptoms_text.insert(END, details, f"details{i}")
+            self.symptoms_text.insert(END, "\n")
         
-        self.symptoms_text.insert(END, "\n" + "─" * 60 + "\n")
+        self.symptoms_text.insert(END, "─" * 60 + "\n")
         self.symptoms_text.tag_config("note", font=("Arial", 8, "italic"), foreground="#7f8c8d")
         self.symptoms_text.insert(END, 
-                                 "\n💡 Note: Click on a disease name above in the dropdown to see full details.\n" +
-                                 "⚠️  This is for informational purposes only. Consult a doctor for diagnosis.",
+                                 "\n💡 Tip: Select a disease from the dropdown above to see complete details.\n"
+                                 "⚠️  This is AI-based prediction for information only. Consult a doctor!\n"
+                                 "🔍 For better accuracy, enter more specific symptoms.",
                                  "note")
         
         self.symptoms_text.config(state=DISABLED)
@@ -976,26 +1017,51 @@ class DiseaseInfoApp:
         if predictions:
             top_disease = predictions[0]['disease']
             precautions = self.disease_data[top_disease]['precautions']
+            symptoms_list = self.disease_data[top_disease]['symptoms']
             
             self.precautions_text.config(state=NORMAL)
             
             self.precautions_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#e67e22")
             self.precautions_text.insert(END, 
-                                        f"💊 Precautions for Top Match:\n{top_disease}\n", 
+                                        f"💊 Recommended Precautions\n", 
+                                        "header")
+            self.precautions_text.insert(END, 
+                                        f"For: {top_disease}\n", 
                                         "header")
             self.precautions_text.insert(END, "─" * 60 + "\n\n")
             
-            for i, precaution in enumerate(precautions, 1):
-                self.precautions_text.tag_config("number", foreground="#c0392b", font=("Arial", 11, "bold"))
-                self.precautions_text.insert(END, f"{i}. ", "number")
-                self.precautions_text.insert(END, f"{precaution}\n\n")
+            # All symptoms of this disease
+            self.precautions_text.tag_config("symptom_header", font=("Arial", 10, "bold"), foreground="#3498db")
+            self.precautions_text.insert(END, "📋 All Symptoms of This Disease:\n", "symptom_header")
             
-            self.precautions_text.insert(END, "\n" + "─" * 60 + "\n\n")
-            self.precautions_text.tag_config("tip", font=("Arial", 9, "italic"), foreground="#16a085")
+            self.precautions_text.tag_config("symptom_text", font=("Arial", 9), foreground="#34495e")
+            symptom_text = ", ".join(symptoms_list[:10])  # Show first 10
+            if len(symptoms_list) > 10:
+                symptom_text += f", and {len(symptoms_list) - 10} more..."
+            self.precautions_text.insert(END, f"{symptom_text}\n\n", "symptom_text")
+            
+            # Precautions
+            self.precautions_text.tag_config("precaution_header", font=("Arial", 10, "bold"), foreground="#e67e22")
+            self.precautions_text.insert(END, "🏥 Precautions & Treatment:\n\n", "precaution_header")
+            
+            for i, precaution in enumerate(precautions, 1):
+                self.precautions_text.tag_config("number", foreground="#c0392b", font=("Arial", 10, "bold"))
+                self.precautions_text.insert(END, f"{i}. ", "number")
+                self.precautions_text.tag_config("precaution", font=("Arial", 9), foreground="#2c3e50")
+                self.precautions_text.insert(END, f"{precaution}\n\n", "precaution")
+            
+            self.precautions_text.insert(END, "─" * 60 + "\n\n")
+            self.precautions_text.tag_config("warning_box", font=("Arial", 9, "bold"), foreground="#e74c3c")
             self.precautions_text.insert(END, 
-                                        "💡 Tip: For detailed information about any predicted disease,\n" +
-                                        "select it from the disease dropdown above and click Search.",
-                                        "tip")
+                                        "⚠️  IMPORTANT DISCLAIMER:\n",
+                                        "warning_box")
+            self.precautions_text.tag_config("disclaimer", font=("Arial", 8), foreground="#95a5a6")
+            self.precautions_text.insert(END,
+                                        "This prediction is based on AI analysis and should NOT\n"
+                                        "replace professional medical diagnosis. Please consult\n"
+                                        "a qualified healthcare provider for accurate diagnosis\n"
+                                        "and treatment.",
+                                        "disclaimer")
             
             self.precautions_text.config(state=DISABLED)
     
