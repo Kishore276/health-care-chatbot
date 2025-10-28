@@ -548,6 +548,48 @@ class DiseaseInfoApp:
                          font=("Arial", 9, "italic"), bg='#3498db', fg='white')
         info_label.pack()
         
+        # Symptom Checker Frame
+        symptom_checker_frame = Frame(self.root, bg='#ecf0f1', pady=10)
+        symptom_checker_frame.pack(fill=X, padx=30)
+        
+        # Create container for symptom checker
+        symptom_container = Frame(symptom_checker_frame, bg='#ffffff', bd=2, relief=GROOVE)
+        symptom_container.pack(fill=X, padx=5, pady=5)
+        
+        # Header
+        symptom_header = Frame(symptom_container, bg='#e67e22', pady=8)
+        symptom_header.pack(fill=X)
+        
+        Label(symptom_header, text="🔍 Symptom-Based Disease Prediction", 
+              font=("Arial", 13, "bold"), bg='#e67e22', fg='white').pack()
+        
+        # Input area
+        symptom_input_frame = Frame(symptom_container, bg='#ffffff', pady=10)
+        symptom_input_frame.pack(fill=X, padx=10)
+        
+        Label(symptom_input_frame, text="Enter your symptoms (comma-separated):", 
+              font=("Arial", 10, "bold"), bg='#ffffff', fg='#2c3e50').pack(anchor=W, pady=(0, 5))
+        
+        # Symptom entry
+        symptom_entry_frame = Frame(symptom_input_frame, bg='#ffffff')
+        symptom_entry_frame.pack(fill=X)
+        
+        self.symptom_input_var = StringVar()
+        self.symptom_entry = Entry(symptom_entry_frame, textvariable=self.symptom_input_var, 
+                                   font=("Arial", 10), bd=2, relief=SOLID)
+        self.symptom_entry.pack(side=LEFT, fill=X, expand=True, ipady=4)
+        
+        predict_btn = Button(symptom_entry_frame, text="🔬 Predict Disease", 
+                           command=self.predict_disease_from_symptoms,
+                           bg='#e67e22', fg='white', font=("Arial", 10, "bold"),
+                           padx=15, pady=4, cursor='hand2', relief=RAISED, bd=2)
+        predict_btn.pack(side=LEFT, padx=(10, 0))
+        
+        # Example text
+        Label(symptom_input_frame, 
+              text="Example: fever, headache, cough, body ache", 
+              font=("Arial", 8, "italic"), bg='#ffffff', fg='#7f8c8d').pack(anchor=W, pady=(5, 0))
+        
         # Results Frame
         results_frame = Frame(self.root, bg='#ecf0f1')
         results_frame.pack(fill=BOTH, expand=True, padx=30, pady=15)
@@ -783,6 +825,179 @@ class DiseaseInfoApp:
         self.precautions_text.config(state=DISABLED)
         self.current_disease = None
         self.status_label.config(text="")
+    
+    def predict_disease_from_symptoms(self):
+        """Predict diseases based on entered symptoms"""
+        symptom_input = self.symptom_input_var.get().strip()
+        
+        if not symptom_input:
+            messagebox.showwarning("Warning", "Please enter at least one symptom!")
+            self.symptom_entry.focus()
+            return
+        
+        # Parse input symptoms
+        input_symptoms = [s.strip().lower() for s in symptom_input.split(',')]
+        
+        # Get all symptom columns from dataset
+        symptom_cols = [col for col in self.training_dataset.columns if col != 'prognosis']
+        
+        # Normalize symptom column names (replace _ with space)
+        symptom_col_map = {col.replace('_', ' ').lower(): col for col in symptom_cols}
+        
+        # Match input symptoms to dataset columns
+        matched_symptoms = []
+        unmatched_symptoms = []
+        
+        for inp_symptom in input_symptoms:
+            # Try exact match first
+            if inp_symptom in symptom_col_map:
+                matched_symptoms.append(symptom_col_map[inp_symptom])
+            else:
+                # Try partial matching
+                partial_matches = [col for col_name, col in symptom_col_map.items() 
+                                 if inp_symptom in col_name or col_name in inp_symptom]
+                if partial_matches:
+                    matched_symptoms.append(partial_matches[0])
+                else:
+                    unmatched_symptoms.append(inp_symptom)
+        
+        if not matched_symptoms:
+            messagebox.showerror("No Match", 
+                               f"Could not match any symptoms!\n\n" +
+                               f"Unrecognized: {', '.join(unmatched_symptoms)}\n\n" +
+                               "Please check spelling or try different symptoms.")
+            return
+        
+        # Create symptom vector
+        symptom_vector = pd.Series(0, index=symptom_cols)
+        for symptom in matched_symptoms:
+            symptom_vector[symptom] = 1
+        
+        # Calculate match scores for each disease
+        disease_scores = []
+        
+        for disease in self.training_dataset['prognosis'].unique():
+            disease_rows = self.training_dataset[self.training_dataset['prognosis'] == disease]
+            disease_symptoms = disease_rows[symptom_cols].iloc[0]
+            
+            # Calculate matching score
+            match_count = sum(symptom_vector & disease_symptoms)
+            total_disease_symptoms = disease_symptoms.sum()
+            
+            if total_disease_symptoms > 0:
+                # Score based on: (matched symptoms / total disease symptoms) * 100
+                score = (match_count / total_disease_symptoms) * 100
+                
+                # Bonus for matching more symptoms
+                if match_count > 0:
+                    disease_scores.append({
+                        'disease': disease,
+                        'score': score,
+                        'matched': match_count,
+                        'total': int(total_disease_symptoms)
+                    })
+        
+        # Sort by score
+        disease_scores.sort(key=lambda x: (x['score'], x['matched']), reverse=True)
+        
+        # Get top 5 predictions
+        top_predictions = disease_scores[:5]
+        
+        if not top_predictions:
+            messagebox.showinfo("No Predictions", 
+                              "Could not find matching diseases.\n" +
+                              "Try adding more symptoms or check spelling.")
+            return
+        
+        # Display results
+        self.display_prediction_results(top_predictions, matched_symptoms, unmatched_symptoms)
+    
+    def display_prediction_results(self, predictions, matched_symptoms, unmatched_symptoms):
+        """Display disease prediction results"""
+        # Clear previous results
+        self.clear_results()
+        
+        # Update disease name label
+        self.disease_name_label.config(
+            text=f"🔬 Disease Prediction Results (Top {len(predictions)} Matches)",
+            fg='#e67e22'
+        )
+        
+        # Display in symptoms panel
+        self.symptoms_text.config(state=NORMAL)
+        
+        # Header
+        self.symptoms_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#e67e22")
+        self.symptoms_text.insert(END, f"📊 Predicted Diseases\n", "header")
+        self.symptoms_text.insert(END, "─" * 60 + "\n\n")
+        
+        # Matched symptoms info
+        self.symptoms_text.tag_config("info", font=("Arial", 9), foreground="#16a085")
+        self.symptoms_text.insert(END, f"✓ Matched Symptoms: {len(matched_symptoms)}\n", "info")
+        matched_text = ", ".join([s.replace('_', ' ').title() for s in matched_symptoms])
+        self.symptoms_text.insert(END, f"  {matched_text}\n\n")
+        
+        if unmatched_symptoms:
+            self.symptoms_text.tag_config("warning", font=("Arial", 9), foreground="#e74c3c")
+            self.symptoms_text.insert(END, f"✗ Unmatched: {', '.join(unmatched_symptoms)}\n\n", "warning")
+        
+        self.symptoms_text.insert(END, "─" * 60 + "\n\n")
+        
+        # Display predictions
+        for i, pred in enumerate(predictions, 1):
+            # Rank and disease name
+            self.symptoms_text.tag_config(f"rank{i}", 
+                                         font=("Arial", 11, "bold"), 
+                                         foreground="#2980b9" if i == 1 else "#34495e")
+            
+            rank_symbol = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+            self.symptoms_text.insert(END, f"{rank_symbol} {pred['disease']}\n", f"rank{i}")
+            
+            # Score and match info
+            score_color = "#27ae60" if pred['score'] > 70 else "#f39c12" if pred['score'] > 40 else "#e74c3c"
+            self.symptoms_text.tag_config(f"score{i}", font=("Arial", 9), foreground=score_color)
+            
+            self.symptoms_text.insert(END, 
+                                     f"   Match Score: {pred['score']:.1f}% ", 
+                                     f"score{i}")
+            self.symptoms_text.insert(END, 
+                                     f"({pred['matched']}/{pred['total']} symptoms matched)\n\n")
+        
+        self.symptoms_text.insert(END, "\n" + "─" * 60 + "\n")
+        self.symptoms_text.tag_config("note", font=("Arial", 8, "italic"), foreground="#7f8c8d")
+        self.symptoms_text.insert(END, 
+                                 "\n💡 Note: Click on a disease name above in the dropdown to see full details.\n" +
+                                 "⚠️  This is for informational purposes only. Consult a doctor for diagnosis.",
+                                 "note")
+        
+        self.symptoms_text.config(state=DISABLED)
+        
+        # Display precautions for top prediction
+        if predictions:
+            top_disease = predictions[0]['disease']
+            precautions = self.disease_data[top_disease]['precautions']
+            
+            self.precautions_text.config(state=NORMAL)
+            
+            self.precautions_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#e67e22")
+            self.precautions_text.insert(END, 
+                                        f"💊 Precautions for Top Match:\n{top_disease}\n", 
+                                        "header")
+            self.precautions_text.insert(END, "─" * 60 + "\n\n")
+            
+            for i, precaution in enumerate(precautions, 1):
+                self.precautions_text.tag_config("number", foreground="#c0392b", font=("Arial", 11, "bold"))
+                self.precautions_text.insert(END, f"{i}. ", "number")
+                self.precautions_text.insert(END, f"{precaution}\n\n")
+            
+            self.precautions_text.insert(END, "\n" + "─" * 60 + "\n\n")
+            self.precautions_text.tag_config("tip", font=("Arial", 9, "italic"), foreground="#16a085")
+            self.precautions_text.insert(END, 
+                                        "💡 Tip: For detailed information about any predicted disease,\n" +
+                                        "select it from the disease dropdown above and click Search.",
+                                        "tip")
+            
+            self.precautions_text.config(state=DISABLED)
     
     def on_language_change(self, event=None):
         """Handle language change"""
