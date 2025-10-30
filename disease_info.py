@@ -14,8 +14,14 @@ class DiseaseInfoApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Disease Information System - India")
-        self.root.geometry("1000x800")
+        self.root.geometry("1200x900")  # Increased window size
         self.root.configure(bg='#ecf0f1')
+        
+        # Make window resizable
+        self.root.resizable(True, True)
+        
+        # Set minimum window size
+        self.root.minsize(1000, 700)
         
         # Initialize translator and geolocator
         try:
@@ -527,6 +533,13 @@ class DiseaseInfoApp:
                           padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
         voice_btn.grid(row=0, column=4, padx=5)
         
+        # Quick Map Test Button
+        map_test_btn = Button(search_container, text="🗺️ Quick Map Test", 
+                             command=self.quick_map_test,
+                             bg='#e67e22', fg='white', font=("Arial", 11, "bold"),
+                             padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
+        map_test_btn.grid(row=0, column=5, padx=5)
+        
         # Dropdown suggestion
         Label(search_container, text="Or select from list:", font=("Arial", 10), 
               bg='#ecf0f1', fg='#7f8c8d').grid(row=1, column=0, padx=(0, 10), pady=(10, 0), sticky=W)
@@ -646,25 +659,26 @@ class DiseaseInfoApp:
         precautions_scroll.config(command=self.precautions_text.yview)
         
         # Nearby Hospitals & Medical Shops Frame (below both columns)
-        location_label_frame = LabelFrame(results_frame, text="🏥 Find Nearby Hospitals & Medical Shops", 
-                                      font=("Arial", 12, "bold"), bg='#ffffff',
-                                      fg='#2c3e50', padx=12, pady=10, relief=GROOVE, bd=2)
-        location_label_frame.pack(fill=X, pady=(10, 0))
+        location_label_frame = LabelFrame(results_frame, text="🏥 🗺️ Find Nearby Hospitals & Medical Shops", 
+                                      font=("Arial", 14, "bold"), bg='#e8f5e8',
+                                      fg='#2c3e50', padx=15, pady=15, relief=GROOVE, bd=3)
+        location_label_frame.pack(fill=X, pady=(15, 0))
         
         # Location input frame
-        location_input_frame = Frame(location_label_frame, bg='#ffffff')
-        location_input_frame.pack(fill=X, pady=(5, 10))
+        location_input_frame = Frame(location_label_frame, bg='#f8f9fa')
+        location_input_frame.pack(fill=X, pady=(10, 15))
         
-        Label(location_input_frame, text="Your Location:", font=("Arial", 10), 
-              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(5, 10))
+        Label(location_input_frame, text="📍 Your Location:", font=("Arial", 11, "bold"), 
+              bg='#f8f9fa', fg='#2c3e50').pack(side=LEFT, padx=(10, 10))
         
         self.location_var = StringVar()
         self.location_entry = Entry(location_input_frame, textvariable=self.location_var, 
-                                    width=30, font=("Arial", 10), bd=2, relief=SOLID)
-        self.location_entry.pack(side=LEFT, padx=5)
+                                    width=25, font=("Arial", 11), bd=2, relief=SOLID,
+                                    highlightbackground='#3498db', highlightthickness=1)
+        self.location_entry.pack(side=LEFT, padx=5, ipady=3)
         
-        Label(location_input_frame, text="Radius (km):", font=("Arial", 10), 
-              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(15, 10))
+        Label(location_input_frame, text="🔍 Radius (km):", font=("Arial", 11, "bold"), 
+              bg='#f8f9fa', fg='#2c3e50').pack(side=LEFT, padx=(15, 10))
         
         self.radius_var = StringVar(value="5")
         radius_combo = ttk.Combobox(location_input_frame, textvariable=self.radius_var, 
@@ -673,21 +687,22 @@ class DiseaseInfoApp:
         radius_combo.pack(side=LEFT, padx=5)
         
         find_btn = Button(location_input_frame, text="🗺️ Show on Map", command=self.show_nearby_places,
-                         bg='#3498db', fg='white', font=("Arial", 10, "bold"),
-                         padx=12, pady=4, cursor='hand2', relief=RAISED, bd=2)
-        find_btn.pack(side=LEFT, padx=10)
+                         bg='#3498db', fg='white', font=("Arial", 12, "bold"),
+                         padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
+        find_btn.pack(side=LEFT, padx=15)
         
         # Button to open existing map
         open_map_btn = Button(location_input_frame, text="📂 Open Last Map", 
                              command=self.open_existing_map,
-                             bg='#95a5a6', fg='white', font=("Arial", 10, "bold"),
-                             padx=12, pady=4, cursor='hand2', relief=RAISED, bd=2)
-        open_map_btn.pack(side=LEFT, padx=5)
+                             bg='#27ae60', fg='white', font=("Arial", 12, "bold"),
+                             padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
+        open_map_btn.pack(side=LEFT, padx=10)
         
         # Location info text
-        self.location_info = Label(location_label_frame, text="Enter your location (e.g., 'Chennai, India' or 'Mumbai') to find nearby hospitals and medical shops",
-                                  font=("Arial", 9, "italic"), bg='#ffffff', fg='#7f8c8d', wraplength=800)
-        self.location_info.pack(pady=5)
+        self.location_info = Label(location_label_frame, 
+                                  text="💡 Enter your location (e.g., 'Chennai, India' or 'Mumbai') → Select radius → Click 'Show on Map'",
+                                  font=("Arial", 10, "bold"), bg='#e8f5e8', fg='#27ae60', wraplength=900)
+        self.location_info.pack(pady=(5, 10))
         
         # Footer
         footer_frame = Frame(self.root, bg='#34495e', height=30)
@@ -1079,6 +1094,20 @@ class DiseaseInfoApp:
         # Re-display current results if any
         if hasattr(self, 'current_disease') and self.current_disease:
             self.show_disease_info()
+    
+    def quick_map_test(self):
+        """Quick test for map functionality"""
+        # Set default values for testing
+        self.location_var.set("Mumbai, India")
+        self.radius_var.set("5")
+        
+        # Show confirmation and run map creation
+        result = messagebox.askyesno("Quick Map Test", 
+                                   "This will create a test map for Mumbai, India with 5km radius.\n\n"
+                                   "This will help verify that the map functionality is working.\n\n"
+                                   "Continue?")
+        if result:
+            self.show_nearby_places()
     
     def open_existing_map(self):
         """Open the last created map file"""
