@@ -677,6 +677,13 @@ class DiseaseInfoApp:
                          padx=12, pady=4, cursor='hand2', relief=RAISED, bd=2)
         find_btn.pack(side=LEFT, padx=10)
         
+        # Button to open existing map
+        open_map_btn = Button(location_input_frame, text="📂 Open Last Map", 
+                             command=self.open_existing_map,
+                             bg='#95a5a6', fg='white', font=("Arial", 10, "bold"),
+                             padx=12, pady=4, cursor='hand2', relief=RAISED, bd=2)
+        open_map_btn.pack(side=LEFT, padx=5)
+        
         # Location info text
         self.location_info = Label(location_label_frame, text="Enter your location (e.g., 'Chennai, India' or 'Mumbai') to find nearby hospitals and medical shops",
                                   font=("Arial", 9, "italic"), bg='#ffffff', fg='#7f8c8d', wraplength=800)
@@ -1073,6 +1080,43 @@ class DiseaseInfoApp:
         if hasattr(self, 'current_disease') and self.current_disease:
             self.show_disease_info()
     
+    def open_existing_map(self):
+        """Open the last created map file"""
+        map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nearby_places_map.html')
+        
+        if os.path.exists(map_file):
+            try:
+                import platform
+                # Use OS-specific command for reliable opening
+                if platform.system() == 'Windows':
+                    os.startfile(map_file)
+                elif platform.system() == 'Darwin':  # macOS
+                    os.system(f'open "{map_file}"')
+                else:  # Linux
+                    os.system(f'xdg-open "{map_file}"')
+                
+                self.status_label.config(text="✅ Map opened in browser!", fg='#27ae60')
+                messagebox.showinfo("Map Opened", 
+                                  f"The map has been opened in your web browser!\n\n"
+                                  f"📂 File location:\n{map_file}\n\n"
+                                  f"💡 Tip: You can also double-click 'nearby_places_map.html'\n"
+                                  f"in the project folder to open it anytime.")
+            except Exception as e:
+                messagebox.showerror("Error", 
+                                   f"Could not open map automatically.\n\n"
+                                   f"Please manually open:\n{map_file}\n\n"
+                                   f"You can double-click the file in File Explorer.\n\n"
+                                   f"Error: {str(e)}")
+        else:
+            messagebox.showwarning("No Map Found", 
+                                 "No map has been created yet!\n\n"
+                                 "Please:\n"
+                                 "1. Enter a location (e.g., 'Mumbai, India')\n"
+                                 "2. Select radius (1-20 km)\n"
+                                 "3. Click 'Show on Map' button\n\n"
+                                 "The map will be created and opened in your browser.")
+            self.location_entry.focus()
+    
     def show_nearby_places(self):
         """Find and display nearby hospitals and medical shops on map"""
         location_text = self.location_var.get().strip()
@@ -1183,22 +1227,53 @@ class DiseaseInfoApp:
             map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nearby_places_map.html')
             map_obj.save(map_file)
             
-            # Open map in browser
-            self.root.after(0, lambda: webbrowser.open('file://' + map_file))
-            
+            # Update status
             self.root.after(0, lambda: self.status_label.config(
-                text=f"✅ Map opened in browser! Found places within {radius_km} km radius.", 
+                text=f"✅ Map created! Opening in browser...", 
                 fg='#27ae60'))
             
-            self.root.after(0, lambda: messagebox.showinfo(
-                "Map Created", 
-                f"Map has been opened in your browser!\n\n"
+            # Open map in browser with multiple fallback methods
+            try:
+                # Method 1: Try default browser
+                import platform
+                if platform.system() == 'Windows':
+                    os.startfile(map_file)
+                elif platform.system() == 'Darwin':  # macOS
+                    os.system(f'open "{map_file}"')
+                else:  # Linux
+                    os.system(f'xdg-open "{map_file}"')
+                
+                self.root.after(100, lambda: self.status_label.config(
+                    text=f"✅ Map opened! Check your web browser.", 
+                    fg='#27ae60'))
+            except Exception as e:
+                # Method 2: Fallback to webbrowser module
+                try:
+                    webbrowser.open('file://' + map_file)
+                    self.root.after(100, lambda: self.status_label.config(
+                        text=f"✅ Map opened in browser!", 
+                        fg='#27ae60'))
+                except:
+                    # If both fail, show file location
+                    self.root.after(0, lambda: self.status_label.config(
+                        text=f"⚠️ Map saved at: {map_file}", 
+                        fg='#f39c12'))
+            
+            # Show success message
+            self.root.after(500, lambda: messagebox.showinfo(
+                "Map Created Successfully!", 
+                f"🗺️ Interactive map has been created!\n\n"
                 f"📍 Location: {location.address}\n"
                 f"🔵 Blue markers = Hospitals/Clinics\n"
                 f"🟢 Green markers = Pharmacies/Medical Shops\n"
-                f"🔴 Red marker = Your Location\n\n"
-                f"Note: This is a demo with sample locations.\n"
-                f"For real data, integrate with Overpass API or Google Places API."))
+                f"🔴 Red marker = Your Location\n"
+                f"⭕ Blue circle = {radius_km} km search radius\n\n"
+                f"� File saved at:\n{map_file}\n\n"
+                f"💡 The map should open automatically in your browser.\n"
+                f"If not, use the 'Open Last Map' button or\n"
+                f"double-click the 'nearby_places_map.html' file.\n\n"
+                f"Note: Currently showing sample locations.\n"
+                f"For real data, integrate Overpass API or Google Places API."))
             
         except Exception as e:
             error_msg = str(e)
