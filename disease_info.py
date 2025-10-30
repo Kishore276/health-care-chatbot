@@ -651,51 +651,78 @@ class DiseaseInfoApp:
         self.precautions_text.pack(fill=BOTH, expand=True)
         precautions_scroll.config(command=self.precautions_text.yview)
         
-        # Nearby Hospitals & Medical Shops Frame (below both columns)
-        location_label_frame = LabelFrame(results_frame, text="🏥 🗺️ Find Nearby Hospitals & Medical Shops", 
-                                      font=("Arial", 14, "bold"), bg='#e3f2fd',
-                                      fg='#1565c0', padx=15, pady=15, relief=GROOVE, bd=3)
-        location_label_frame.pack(fill=X, pady=(15, 0))
+
         
-        # Location input frame
-        location_input_frame = Frame(location_label_frame, bg='#f3f8ff')
-        location_input_frame.pack(fill=X, pady=(10, 15))
+        # Map Section Frame (Main Feature at Bottom)
+        map_main_frame = Frame(self.root, bg='#ecf0f1', pady=10)
+        map_main_frame.pack(fill=X, padx=30, side=BOTTOM, before=results_frame)
         
-        Label(location_input_frame, text="📍 Your Location:", font=("Arial", 11, "bold"), 
-              bg='#f3f8ff', fg='#1565c0').pack(side=LEFT, padx=(10, 10))
+        # Create prominent map container
+        map_container = Frame(map_main_frame, bg='#ffffff', bd=3, relief=GROOVE)
+        map_container.pack(fill=X, padx=5, pady=5)
         
-        self.location_var = StringVar()
-        self.location_entry = Entry(location_input_frame, textvariable=self.location_var, 
-                                    width=25, font=("Arial", 11), bd=2, relief=SOLID,
-                                    highlightbackground='#3498db', highlightthickness=1)
-        self.location_entry.pack(side=LEFT, padx=5, ipady=3)
+        # Map header with prominent styling
+        map_header = Frame(map_container, bg='#2980b9', pady=12)
+        map_header.pack(fill=X)
         
-        Label(location_input_frame, text="🔍 Radius (km):", font=("Arial", 11, "bold"), 
-              bg='#f3f8ff', fg='#1565c0').pack(side=LEFT, padx=(15, 10))
+        Label(map_header, text="🗺️ 🏥 Find Nearby Hospitals & Medical Shops", 
+              font=("Arial", 16, "bold"), bg='#2980b9', fg='white').pack()
         
-        self.radius_var = StringVar(value="5")
-        radius_combo = ttk.Combobox(location_input_frame, textvariable=self.radius_var, 
-                                   values=["1", "2", "5", "10", "15", "20"], 
-                                   width=8, font=("Arial", 10), state='readonly')
-        radius_combo.pack(side=LEFT, padx=5)
+        Label(map_header, text="🟢 Green = Hospitals & Clinics  |  🔵 Blue = Medical Stores & Pharmacies", 
+              font=("Arial", 11), bg='#2980b9', fg='#ecf0f1').pack(pady=(5, 0))
         
-        find_btn = Button(location_input_frame, text="🗺️ Show on Map", command=self.show_nearby_places,
-                         bg='#3498db', fg='white', font=("Arial", 12, "bold"),
-                         padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
-        find_btn.pack(side=LEFT, padx=15)
+        # Map input area
+        map_input_frame = Frame(map_container, bg='#ffffff', pady=15)
+        map_input_frame.pack(fill=X, padx=20)
         
-        # Button to open existing map
-        open_map_btn = Button(location_input_frame, text="📂 Open Last Map", 
-                             command=self.open_existing_map,
-                             bg='#27ae60', fg='white', font=("Arial", 12, "bold"),
-                             padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
-        open_map_btn.pack(side=LEFT, padx=10)
+        # Location input row
+        location_row = Frame(map_input_frame, bg='#ffffff')
+        location_row.pack(fill=X, pady=(0, 10))
         
-        # Location info text
-        self.location_info = Label(location_label_frame, 
-                                  text="💡 Enter your location → Select radius → Click 'Show on Map' | 🟢 Green = Hospitals | 🔵 Blue = Medical Stores",
-                                  font=("Arial", 10, "bold"), bg='#e3f2fd', fg='#1565c0', wraplength=900)
-        self.location_info.pack(pady=(5, 10))
+        Label(location_row, text="📍 Enter Location:", font=("Arial", 12, "bold"), 
+              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(0, 10))
+        
+        self.map_location_var = StringVar()
+        self.map_location_entry = Entry(location_row, textvariable=self.map_location_var, 
+                                        width=30, font=("Arial", 11), bd=2, relief=SOLID)
+        self.map_location_entry.pack(side=LEFT, padx=5, ipady=4)
+        
+        Label(location_row, text="(e.g., Mumbai, India or Chennai or Delhi)", 
+              font=("Arial", 9, "italic"), bg='#ffffff', fg='#7f8c8d').pack(side=LEFT, padx=(10, 0))
+        
+        # Distance selection row
+        distance_row = Frame(map_input_frame, bg='#ffffff')
+        distance_row.pack(fill=X, pady=(0, 15))
+        
+        Label(distance_row, text="📏 Search Radius:", font=("Arial", 12, "bold"), 
+              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(0, 10))
+        
+        self.map_radius_var = StringVar(value="5")
+        radius_dropdown = ttk.Combobox(distance_row, textvariable=self.map_radius_var, 
+                                      values=["1", "2", "3", "5", "8", "10", "15", "20"], 
+                                      width=10, font=("Arial", 11), state='readonly')
+        radius_dropdown.pack(side=LEFT, padx=5)
+        
+        Label(distance_row, text="kilometers", font=("Arial", 11), 
+              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(5, 20))
+        
+        # Map action buttons
+        map_btn = Button(distance_row, text="🗺️ Show Hospitals & Medical Shops", 
+                        command=self.show_map_locations,
+                        bg='#27ae60', fg='white', font=("Arial", 12, "bold"),
+                        padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
+        map_btn.pack(side=LEFT, padx=10)
+        
+        open_existing_btn = Button(distance_row, text="📂 Open Last Map", 
+                                  command=self.open_existing_map,
+                                  bg='#3498db', fg='white', font=("Arial", 12, "bold"),
+                                  padx=15, pady=8, cursor='hand2', relief=RAISED, bd=3)
+        open_existing_btn.pack(side=LEFT, padx=5)
+        
+        # Map status label
+        self.map_status_label = Label(map_container, text="", font=("Arial", 10, "italic"), 
+                                     bg='#ffffff', fg='#e74c3c')
+        self.map_status_label.pack(pady=(0, 10))
         
         # Footer
         footer_frame = Frame(self.root, bg='#34495e', height=30)
@@ -1090,6 +1117,28 @@ class DiseaseInfoApp:
     
 
     
+    def show_map_locations(self):
+        """Show hospitals and medical shops on map based on user input"""
+        location_text = self.map_location_var.get().strip()
+        
+        if not location_text:
+            messagebox.showwarning("Warning", "Please enter your location!")
+            self.map_location_entry.focus()
+            return
+        
+        try:
+            radius_km = float(self.map_radius_var.get())
+        except:
+            radius_km = 5.0
+        
+        self.map_status_label.config(text="🔍 Finding your location and nearby medical facilities...", fg='#3498db')
+        self.root.update()
+        
+        # Run in thread to avoid freezing UI
+        thread = threading.Thread(target=self.create_location_map, args=(location_text, radius_km))
+        thread.daemon = True
+        thread.start()
+    
     def open_existing_map(self):
         """Open the last created map file"""
         map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nearby_places_map.html')
@@ -1105,7 +1154,7 @@ class DiseaseInfoApp:
                 else:  # Linux
                     os.system(f'xdg-open "{map_file}"')
                 
-                self.status_label.config(text="✅ Map opened in browser!", fg='#27ae60')
+                self.map_status_label.config(text="✅ Map opened in browser!", fg='#27ae60')
                 messagebox.showinfo("Map Opened", 
                                   f"The map has been opened in your web browser!\n\n"
                                   f"📂 File location:\n{map_file}\n\n"
@@ -1123,33 +1172,11 @@ class DiseaseInfoApp:
                                  "Please:\n"
                                  "1. Enter a location (e.g., 'Mumbai, India')\n"
                                  "2. Select radius (1-20 km)\n"
-                                 "3. Click 'Show on Map' button\n\n"
+                                 "3. Click 'Show Hospitals & Medical Shops' button\n\n"
                                  "The map will be created and opened in your browser.")
-            self.location_entry.focus()
+            self.map_location_entry.focus()
     
-    def show_nearby_places(self):
-        """Find and display nearby hospitals and medical shops on map"""
-        location_text = self.location_var.get().strip()
-        
-        if not location_text:
-            messagebox.showwarning("Warning", "Please enter your location!")
-            self.location_entry.focus()
-            return
-        
-        try:
-            radius_km = float(self.radius_var.get())
-        except:
-            radius_km = 5.0
-        
-        self.status_label.config(text="🔍 Finding your location...", fg='#3498db')
-        self.root.update()
-        
-        # Run in thread to avoid freezing UI
-        thread = threading.Thread(target=self.create_map, args=(location_text, radius_km))
-        thread.daemon = True
-        thread.start()
-    
-    def create_map(self, location_text, radius_km):
+    def create_location_map(self, location_text, radius_km):
         """Create OpenStreetMap with nearby hospitals and medical shops"""
         try:
             # Geocode the location
@@ -1159,12 +1186,12 @@ class DiseaseInfoApp:
                 self.root.after(0, lambda: messagebox.showerror(
                     "Location Not Found", 
                     f"Could not find '{location_text}'.\nTry: 'City, Country' format (e.g., 'Chennai, India')"))
-                self.root.after(0, lambda: self.status_label.config(text="❌ Location not found", fg='#e74c3c'))
+                self.root.after(0, lambda: self.map_status_label.config(text="❌ Location not found", fg='#e74c3c'))
                 return
             
             lat, lon = location.latitude, location.longitude
             
-            self.root.after(0, lambda: self.status_label.config(
+            self.root.after(0, lambda: self.map_status_label.config(
                 text=f"📍 Location found! Searching for hospitals & medical shops within {radius_km} km...", 
                 fg='#27ae60'))
             
@@ -1245,7 +1272,7 @@ class DiseaseInfoApp:
             map_obj.save(map_file)
             
             # Update status
-            self.root.after(0, lambda: self.status_label.config(
+            self.root.after(0, lambda: self.map_status_label.config(
                 text=f"✅ Map created! Opening in browser...", 
                 fg='#27ae60'))
             
@@ -1260,19 +1287,19 @@ class DiseaseInfoApp:
                 else:  # Linux
                     os.system(f'xdg-open "{map_file}"')
                 
-                self.root.after(100, lambda: self.status_label.config(
+                self.root.after(100, lambda: self.map_status_label.config(
                     text=f"✅ Map opened! Check your web browser.", 
                     fg='#27ae60'))
             except Exception as e:
                 # Method 2: Fallback to webbrowser module
                 try:
                     webbrowser.open('file://' + map_file)
-                    self.root.after(100, lambda: self.status_label.config(
+                    self.root.after(100, lambda: self.map_status_label.config(
                         text=f"✅ Map opened in browser!", 
                         fg='#27ae60'))
                 except:
                     # If both fail, show file location
-                    self.root.after(0, lambda: self.status_label.config(
+                    self.root.after(0, lambda: self.map_status_label.config(
                         text=f"⚠️ Map saved at: {map_file}", 
                         fg='#f39c12'))
             
@@ -1297,7 +1324,7 @@ class DiseaseInfoApp:
             self.root.after(0, lambda: messagebox.showerror(
                 "Error", 
                 f"Error creating map: {error_msg}\n\nMake sure you have internet connection."))
-            self.root.after(0, lambda: self.status_label.config(
+            self.root.after(0, lambda: self.map_status_label.config(
                 text="❌ Error creating map", fg='#e74c3c'))
 
 if __name__ == "__main__":
