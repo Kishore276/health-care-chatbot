@@ -533,13 +533,6 @@ class DiseaseInfoApp:
                           padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
         voice_btn.grid(row=0, column=4, padx=5)
         
-        # Quick Map Test Button
-        map_test_btn = Button(search_container, text="🗺️ Quick Map Test", 
-                             command=self.quick_map_test,
-                             bg='#e67e22', fg='white', font=("Arial", 11, "bold"),
-                             padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
-        map_test_btn.grid(row=0, column=5, padx=5)
-        
         # Dropdown suggestion
         Label(search_container, text="Or select from list:", font=("Arial", 10), 
               bg='#ecf0f1', fg='#7f8c8d').grid(row=1, column=0, padx=(0, 10), pady=(10, 0), sticky=W)
@@ -660,16 +653,16 @@ class DiseaseInfoApp:
         
         # Nearby Hospitals & Medical Shops Frame (below both columns)
         location_label_frame = LabelFrame(results_frame, text="🏥 🗺️ Find Nearby Hospitals & Medical Shops", 
-                                      font=("Arial", 14, "bold"), bg='#e8f5e8',
-                                      fg='#2c3e50', padx=15, pady=15, relief=GROOVE, bd=3)
+                                      font=("Arial", 14, "bold"), bg='#e3f2fd',
+                                      fg='#1565c0', padx=15, pady=15, relief=GROOVE, bd=3)
         location_label_frame.pack(fill=X, pady=(15, 0))
         
         # Location input frame
-        location_input_frame = Frame(location_label_frame, bg='#f8f9fa')
+        location_input_frame = Frame(location_label_frame, bg='#f3f8ff')
         location_input_frame.pack(fill=X, pady=(10, 15))
         
         Label(location_input_frame, text="📍 Your Location:", font=("Arial", 11, "bold"), 
-              bg='#f8f9fa', fg='#2c3e50').pack(side=LEFT, padx=(10, 10))
+              bg='#f3f8ff', fg='#1565c0').pack(side=LEFT, padx=(10, 10))
         
         self.location_var = StringVar()
         self.location_entry = Entry(location_input_frame, textvariable=self.location_var, 
@@ -678,7 +671,7 @@ class DiseaseInfoApp:
         self.location_entry.pack(side=LEFT, padx=5, ipady=3)
         
         Label(location_input_frame, text="🔍 Radius (km):", font=("Arial", 11, "bold"), 
-              bg='#f8f9fa', fg='#2c3e50').pack(side=LEFT, padx=(15, 10))
+              bg='#f3f8ff', fg='#1565c0').pack(side=LEFT, padx=(15, 10))
         
         self.radius_var = StringVar(value="5")
         radius_combo = ttk.Combobox(location_input_frame, textvariable=self.radius_var, 
@@ -700,8 +693,8 @@ class DiseaseInfoApp:
         
         # Location info text
         self.location_info = Label(location_label_frame, 
-                                  text="💡 Enter your location (e.g., 'Chennai, India' or 'Mumbai') → Select radius → Click 'Show on Map'",
-                                  font=("Arial", 10, "bold"), bg='#e8f5e8', fg='#27ae60', wraplength=900)
+                                  text="💡 Enter your location → Select radius → Click 'Show on Map' | 🟢 Green = Hospitals | 🔵 Blue = Medical Stores",
+                                  font=("Arial", 10, "bold"), bg='#e3f2fd', fg='#1565c0', wraplength=900)
         self.location_info.pack(pady=(5, 10))
         
         # Footer
@@ -1095,19 +1088,7 @@ class DiseaseInfoApp:
         if hasattr(self, 'current_disease') and self.current_disease:
             self.show_disease_info()
     
-    def quick_map_test(self):
-        """Quick test for map functionality"""
-        # Set default values for testing
-        self.location_var.set("Mumbai, India")
-        self.radius_var.set("5")
-        
-        # Show confirmation and run map creation
-        result = messagebox.askyesno("Quick Map Test", 
-                                   "This will create a test map for Mumbai, India with 5km radius.\n\n"
-                                   "This will help verify that the map functionality is working.\n\n"
-                                   "Continue?")
-        if result:
-            self.show_nearby_places()
+
     
     def open_existing_map(self):
         """Open the last created map file"""
@@ -1219,37 +1200,44 @@ class DiseaseInfoApp:
             
             # Sample hospitals (these are examples - in production use real API)
             sample_hospitals = [
-                {"name": "City Hospital", "lat": lat + 0.01, "lon": lon + 0.01, "type": "hospital"},
-                {"name": "Medical Center", "lat": lat - 0.01, "lon": lon + 0.015, "type": "hospital"},
+                {"name": "City General Hospital", "lat": lat + 0.01, "lon": lon + 0.01, "type": "hospital"},
+                {"name": "Metro Medical Center", "lat": lat - 0.01, "lon": lon + 0.015, "type": "hospital"},
                 {"name": "Emergency Clinic", "lat": lat + 0.015, "lon": lon - 0.01, "type": "clinic"},
+                {"name": "Sunrise Hospital", "lat": lat + 0.008, "lon": lon + 0.018, "type": "hospital"},
+                {"name": "Community Health Center", "lat": lat - 0.018, "lon": lon - 0.008, "type": "clinic"},
+                {"name": "Specialized Surgery Center", "lat": lat + 0.020, "lon": lon - 0.015, "type": "hospital"},
             ]
             
             sample_pharmacies = [
                 {"name": "MedPlus Pharmacy", "lat": lat + 0.008, "lon": lon - 0.008, "type": "pharmacy"},
                 {"name": "Apollo Pharmacy", "lat": lat - 0.012, "lon": lon - 0.005, "type": "pharmacy"},
-                {"name": "Medical Shop", "lat": lat - 0.005, "lon": lon + 0.012, "type": "pharmacy"},
+                {"name": "HealthCare Medical Store", "lat": lat - 0.005, "lon": lon + 0.012, "type": "pharmacy"},
+                {"name": "Quick Meds", "lat": lat + 0.012, "lon": lon + 0.008, "type": "pharmacy"},
+                {"name": "24/7 Medical Store", "lat": lat - 0.008, "lon": lon + 0.016, "type": "pharmacy"},
+                {"name": "Generic Medicine Shop", "lat": lat + 0.016, "lon": lon - 0.012, "type": "pharmacy"},
+                {"name": "Wellness Pharmacy", "lat": lat - 0.015, "lon": lon - 0.010, "type": "pharmacy"},
             ]
             
-            # Add hospital markers
+            # Add hospital markers (GREEN as requested)
             for hospital in sample_hospitals:
                 distance = geodesic((lat, lon), (hospital['lat'], hospital['lon'])).km
                 if distance <= radius_km:
                     folium.Marker(
                         [hospital['lat'], hospital['lon']],
-                        popup=f"<b>{hospital['name']}</b><br>Type: {hospital['type'].title()}<br>Distance: {distance:.2f} km",
-                        tooltip=hospital['name'],
-                        icon=folium.Icon(color='blue', icon='plus-square', prefix='fa')
+                        popup=f"<b>🏥 {hospital['name']}</b><br>Type: {hospital['type'].title()}<br>Distance: {distance:.2f} km<br>Services: Emergency, Surgery, ICU",
+                        tooltip=f"🏥 {hospital['name']}",
+                        icon=folium.Icon(color='green', icon='plus-square', prefix='fa')
                     ).add_to(map_obj)
             
-            # Add pharmacy markers
+            # Add medical store/pharmacy markers (BLUE as requested)
             for pharmacy in sample_pharmacies:
                 distance = geodesic((lat, lon), (pharmacy['lat'], pharmacy['lon'])).km
                 if distance <= radius_km:
                     folium.Marker(
                         [pharmacy['lat'], pharmacy['lon']],
-                        popup=f"<b>{pharmacy['name']}</b><br>Type: {pharmacy['type'].title()}<br>Distance: {distance:.2f} km",
-                        tooltip=pharmacy['name'],
-                        icon=folium.Icon(color='green', icon='medkit', prefix='fa')
+                        popup=f"<b>💊 {pharmacy['name']}</b><br>Type: Medical Store<br>Distance: {distance:.2f} km<br>Services: Medicines, First Aid",
+                        tooltip=f"💊 {pharmacy['name']}",
+                        icon=folium.Icon(color='blue', icon='medkit', prefix='fa')
                     ).add_to(map_obj)
             
             # Save map to HTML file
@@ -1293,11 +1281,11 @@ class DiseaseInfoApp:
                 "Map Created Successfully!", 
                 f"🗺️ Interactive map has been created!\n\n"
                 f"📍 Location: {location.address}\n"
-                f"🔵 Blue markers = Hospitals/Clinics\n"
-                f"🟢 Green markers = Pharmacies/Medical Shops\n"
+                f"� Green markers = Hospitals/Clinics\n"
+                f"� Blue markers = Medical Stores/Pharmacies\n"
                 f"🔴 Red marker = Your Location\n"
                 f"⭕ Blue circle = {radius_km} km search radius\n\n"
-                f"� File saved at:\n{map_file}\n\n"
+                f"📁 File saved at:\n{map_file}\n\n"
                 f"💡 The map should open automatically in your browser.\n"
                 f"If not, use the 'Open Last Map' button or\n"
                 f"double-click the 'nearby_places_map.html' file.\n\n"
