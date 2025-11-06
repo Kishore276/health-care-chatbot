@@ -2,35 +2,53 @@ from tkinter import *
 from tkinter import ttk, messagebox
 import pandas as pd
 import numpy as np
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 import threading
 import os
 import webbrowser
 import folium
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+import pyttsx3  # Text-to-speech library
 
 class DiseaseInfoApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Disease Information System - India")
-        self.root.geometry("1200x900")  # Increased window size
+        
+        # Maximize the window to fill entire screen
+        self.root.state('zoomed')  # Maximize window on Windows
+        
         self.root.configure(bg='#ecf0f1')
         
         # Make window resizable
         self.root.resizable(True, True)
         
         # Set minimum window size
-        self.root.minsize(1000, 700)
+        self.root.minsize(1000, 650)
+        
+        # Optional: Maximize window (comment out the geometry setting above if using this)
+        # self.root.state('zoomed')  # For Windows
         
         # Initialize translator and geolocator
         try:
-            self.translator = Translator()
+            # Using GoogleTranslator from deep_translator
+            self.translator = GoogleTranslator()
             self.geolocator = Nominatim(user_agent="disease_info_app")
         except Exception as e:
             messagebox.showwarning("Initialization Warning", 
                 f"Initialization warning: {str(e)}\nSome features may not work.")
             self.translator = None
+        
+        # Initialize text-to-speech engine
+        try:
+            self.tts_engine = pyttsx3.init()
+            self.tts_engine.setProperty('rate', 150)  # Speed of speech
+            self.tts_engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
+            self.is_speaking = False
+        except Exception as e:
+            print(f"Text-to-speech initialization warning: {str(e)}")
+            self.tts_engine = None
         
         # Supported languages
         self.languages = {
@@ -476,17 +494,40 @@ class DiseaseInfoApp:
         ])
     
     def create_widgets(self):
+        # Create main canvas with scrollbar for better fit on smaller screens
+        main_canvas = Canvas(self.root, bg='#ecf0f1', highlightthickness=0)
+        scrollbar = Scrollbar(self.root, orient="vertical", command=main_canvas.yview)
+        scrollable_frame = Frame(main_canvas, bg='#ecf0f1')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+        
+        main_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        main_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        main_canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        
+        # Enable mouse wheel scrolling
+        def _on_mousewheel(event):
+            main_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        main_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Now create all widgets in scrollable_frame instead of self.root
         # Title
-        title_frame = Frame(self.root, bg='#2c3e50', height=80)
+        title_frame = Frame(scrollable_frame, bg='#2c3e50', height=70)
         title_frame.pack(fill=X)
         title_frame.pack_propagate(False)
         
         title_label = Label(title_frame, text="⚕️ 🏥 Disease Information System", 
                           font=("Arial", 24, "bold"), bg='#2c3e50', fg='white')
-        title_label.pack(pady=25)
+        title_label.pack(pady=20)
         
         # Language Selection Frame
-        lang_frame = Frame(self.root, bg='#34495e', pady=8)
+        lang_frame = Frame(scrollable_frame, bg='#34495e', pady=8)
         lang_frame.pack(fill=X)
         
         Label(lang_frame, text="🌐 Output Language:", font=("Arial", 10, "bold"), 
@@ -499,124 +540,133 @@ class DiseaseInfoApp:
         lang_dropdown.pack(side=LEFT)
         lang_dropdown.bind('<<ComboboxSelected>>', self.on_language_change)
         
-        # Search Frame
-        search_frame = Frame(self.root, bg='#ecf0f1', pady=15)
-        search_frame.pack(fill=X, padx=30)
+        # Main container for disease search and symptom prediction SIDE BY SIDE
+        top_container = Frame(scrollable_frame, bg='#ecf0f1', pady=15)
+        top_container.pack(fill=BOTH, expand=True, padx=30)
         
-        # Center the search controls
-        search_container = Frame(search_frame, bg='#ecf0f1')
-        search_container.pack()
+        # LEFT SIDE: Disease Search
+        disease_search_frame = Frame(top_container, bg='#ffffff', bd=2, relief=GROOVE)
+        disease_search_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 10))
         
-        Label(search_container, text="Enter Disease Name:", font=("Arial", 12, "bold"), 
-              bg='#ecf0f1', fg='#2c3e50').grid(row=0, column=0, padx=(0, 10), sticky=W)
+        # Disease search header
+        disease_header = Frame(disease_search_frame, bg='#27ae60', pady=10)
+        disease_header.pack(fill=X)
         
-        # Single Entry box for typing disease name (case-insensitive)
+        Label(disease_header, text="🔍 Disease Information Search", 
+              font=("Arial", 14, "bold"), bg='#27ae60', fg='white').pack()
+        
+        # Disease search content
+        disease_content = Frame(disease_search_frame, bg='#ffffff', pady=12)
+        disease_content.pack(fill=BOTH, expand=True, padx=15)
+        
+        Label(disease_content, text="Enter Disease Name:", font=("Arial", 11, "bold"), 
+              bg='#ffffff', fg='#2c3e50').pack(anchor=W, pady=(0, 8))
+        
         self.disease_var = StringVar()
-        self.disease_entry = Entry(search_container, textvariable=self.disease_var, 
-                                   width=35, font=("Arial", 12), bd=2, relief=SOLID)
-        self.disease_entry.grid(row=0, column=1, padx=5, ipady=6)
+        self.disease_entry = Entry(disease_content, textvariable=self.disease_var, 
+                                   font=("Arial", 12), bd=2, relief=SOLID)
+        self.disease_entry.pack(fill=X, ipady=6, pady=(0, 8))
         self.disease_entry.bind('<Return>', lambda e: self.show_disease_info())
         self.disease_entry.focus()
         
-        search_btn = Button(search_container, text="🔍 Search", command=self.show_disease_info,
+        # Buttons
+        button_frame = Frame(disease_content, bg='#ffffff')
+        button_frame.pack(fill=X, pady=(0, 8))
+        
+        search_btn = Button(button_frame, text="🔍 Search", command=self.show_disease_info,
                           bg='#27ae60', fg='white', font=("Arial", 11, "bold"),
                           padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
-        search_btn.grid(row=0, column=2, padx=5)
+        search_btn.pack(side=LEFT, padx=(0, 8))
         
-        clear_btn = Button(search_container, text="🗑️ Clear", command=self.clear_results,
+        clear_btn = Button(button_frame, text="🗑️ Clear", command=self.clear_results,
                           bg='#e74c3c', fg='white', font=("Arial", 11, "bold"),
                           padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
-        clear_btn.grid(row=0, column=3, padx=5)
+        clear_btn.pack(side=LEFT)
         
-        voice_btn = Button(search_container, text="🎤 Voice", 
-                          bg='#9b59b6', fg='white', font=("Arial", 11, "bold"),
-                          padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
-        voice_btn.grid(row=0, column=4, padx=5)
+        Label(disease_content, text="Or select from list:", font=("Arial", 10), 
+              bg='#ffffff', fg='#7f8c8d').pack(anchor=W, pady=(10, 8))
         
-        # Dropdown suggestion
-        Label(search_container, text="Or select from list:", font=("Arial", 10), 
-              bg='#ecf0f1', fg='#7f8c8d').grid(row=1, column=0, padx=(0, 10), pady=(10, 0), sticky=W)
+        self.disease_combo = ttk.Combobox(disease_content, textvariable=self.disease_var, 
+                                         values=self.diseases, font=("Arial", 11), state='readonly')
+        self.disease_combo.pack(fill=X, pady=(0, 8))
         
-        self.disease_combo = ttk.Combobox(search_container, textvariable=self.disease_var, 
-                                         values=self.diseases, width=33, font=("Arial", 11), state='readonly')
-        self.disease_combo.grid(row=1, column=1, columnspan=3, pady=(10, 0), sticky=W)
+        self.status_label = Label(disease_content, text="", font=("Arial", 8, "italic"), 
+                                 bg='#ffffff', fg='#e74c3c')
+        self.status_label.pack(anchor=W)
         
-        # Status label
-        self.status_label = Label(search_container, text="", font=("Arial", 9, "italic"), 
-                                 bg='#ecf0f1', fg='#e74c3c')
-        self.status_label.grid(row=2, column=0, columnspan=4, pady=(5, 0))
+        # RIGHT SIDE: Symptom Prediction
+        symptom_prediction_frame = Frame(top_container, bg='#ffffff', bd=2, relief=GROOVE)
+        symptom_prediction_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(10, 0))
         
-        # Info label
-        info_frame = Frame(self.root, bg='#3498db', pady=6)
-        info_frame.pack(fill=X, padx=30, pady=(10, 0))
-        
-        info_label = Label(info_frame, text="💡 Tip: Type disease name or select from dropdown | Press Enter to search | Find nearby hospitals & medical shops", 
-                         font=("Arial", 9, "italic"), bg='#3498db', fg='white')
-        info_label.pack()
-        
-        # Symptom Checker Frame
-        symptom_checker_frame = Frame(self.root, bg='#ecf0f1', pady=10)
-        symptom_checker_frame.pack(fill=X, padx=30)
-        
-        # Create container for symptom checker
-        symptom_container = Frame(symptom_checker_frame, bg='#ffffff', bd=2, relief=GROOVE)
-        symptom_container.pack(fill=X, padx=5, pady=5)
-        
-        # Header
-        symptom_header = Frame(symptom_container, bg='#e67e22', pady=8)
+        # Symptom prediction header
+        symptom_header = Frame(symptom_prediction_frame, bg='#e67e22', pady=8)
         symptom_header.pack(fill=X)
         
-        Label(symptom_header, text="🔍 Symptom-Based Disease Prediction", 
+        Label(symptom_header, text="� Symptom-Based Disease Prediction", 
               font=("Arial", 13, "bold"), bg='#e67e22', fg='white').pack()
         
-        # Input area
-        symptom_input_frame = Frame(symptom_container, bg='#ffffff', pady=10)
-        symptom_input_frame.pack(fill=X, padx=10)
+        # Symptom prediction content
+        symptom_content = Frame(symptom_prediction_frame, bg='#ffffff', pady=10)
+        symptom_content.pack(fill=BOTH, expand=True, padx=10)
         
-        Label(symptom_input_frame, text="Enter your symptoms (comma-separated):", 
+        Label(symptom_content, text="Enter your symptoms (comma-separated):", 
               font=("Arial", 10, "bold"), bg='#ffffff', fg='#2c3e50').pack(anchor=W, pady=(0, 5))
         
-        # Symptom entry
-        symptom_entry_frame = Frame(symptom_input_frame, bg='#ffffff')
-        symptom_entry_frame.pack(fill=X)
-        
         self.symptom_input_var = StringVar()
-        self.symptom_entry = Entry(symptom_entry_frame, textvariable=self.symptom_input_var, 
-                                   font=("Arial", 10), bd=2, relief=SOLID)
-        self.symptom_entry.pack(side=LEFT, fill=X, expand=True, ipady=4)
+        self.symptom_entry = Entry(symptom_content, textvariable=self.symptom_input_var, 
+                                   font=("Arial", 11), bd=2, relief=SOLID)
+        self.symptom_entry.pack(fill=X, ipady=5, pady=(0, 5))
         
-        predict_btn = Button(symptom_entry_frame, text="🔬 Predict Disease", 
+        predict_btn = Button(symptom_content, text="🔬 Predict Disease", 
                            command=self.predict_disease_from_symptoms,
                            bg='#e67e22', fg='white', font=("Arial", 10, "bold"),
-                           padx=15, pady=4, cursor='hand2', relief=RAISED, bd=2)
-        predict_btn.pack(side=LEFT, padx=(10, 0))
+                           padx=15, pady=5, cursor='hand2', relief=RAISED, bd=2)
+        predict_btn.pack(anchor=W, pady=(0, 5))
         
-        # Example text
-        Label(symptom_input_frame, 
-              text="Example: fever, headache, cough, body ache", 
-              font=("Arial", 8, "italic"), bg='#ffffff', fg='#7f8c8d').pack(anchor=W, pady=(5, 0))
+        Label(symptom_content, text="Example: fever, headache, cough, body ache", 
+              font=("Arial", 8, "italic"), bg='#ffffff', fg='#7f8c8d').pack(anchor=W)
         
-        # Results Frame
-        results_frame = Frame(self.root, bg='#ecf0f1')
-        results_frame.pack(fill=BOTH, expand=True, padx=30, pady=15)
+        # Results Frame - pack FIRST in normal top-to-bottom order
+        results_frame = Frame(scrollable_frame, bg='#ecf0f1')
+        results_frame.pack(fill=BOTH, expand=True, padx=30, pady=(10, 8))
+        
+        # Disease Name and Read Aloud Button Row
+        header_row = Frame(results_frame, bg='#ecf0f1')
+        header_row.pack(fill=X, pady=(0, 8))
         
         # Disease Name Label
-        self.disease_name_label = Label(results_frame, text="", 
-                                       font=("Arial", 16, "bold"), bg='#ecf0f1', fg='#c0392b')
-        self.disease_name_label.pack(pady=(0, 10))
+        self.disease_name_label = Label(header_row, text="", 
+                                       font=("Arial", 18, "bold"), bg='#ecf0f1', fg='#c0392b')
+        self.disease_name_label.pack(side=LEFT)
+        
+        # Read Aloud Button
+        self.read_aloud_btn = Button(header_row, text="🔊 Read Aloud", 
+                                     command=self.read_aloud_results,
+                                     bg='#9b59b6', fg='white', font=("Arial", 12, "bold"),
+                                     padx=20, pady=8, cursor='hand2', relief=RAISED, bd=2,
+                                     state=DISABLED)
+        self.read_aloud_btn.pack(side=LEFT, padx=20)
+        
+        # Stop Reading Button
+        self.stop_reading_btn = Button(header_row, text="⏹ Stop", 
+                                      command=self.stop_reading,
+                                      bg='#e74c3c', fg='white', font=("Arial", 12, "bold"),
+                                      padx=15, pady=8, cursor='hand2', relief=RAISED, bd=2,
+                                      state=DISABLED)
+        self.stop_reading_btn.pack(side=LEFT, padx=5)
         
         # Create two columns for better layout
         content_frame = Frame(results_frame, bg='#ecf0f1')
-        content_frame.pack(fill=BOTH, expand=True)
+        content_frame.pack(fill=X)
         
         # Left column - Symptoms
         left_frame = Frame(content_frame, bg='#ecf0f1')
-        left_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 5))
+        left_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 8))
         
         # Symptoms Frame
         symptoms_label_frame = LabelFrame(left_frame, text="📋 Symptoms", 
-                                        font=("Arial", 12, "bold"), bg='#ffffff',
-                                        fg='#2c3e50', padx=12, pady=12, relief=GROOVE, bd=2)
+                                        font=("Arial", 13, "bold"), bg='#ffffff',
+                                        fg='#2c3e50', padx=15, pady=15, relief=GROOVE, bd=2)
         symptoms_label_frame.pack(fill=BOTH, expand=True)
         
         # Scrollbar for symptoms
@@ -625,19 +675,19 @@ class DiseaseInfoApp:
         
         self.symptoms_text = Text(symptoms_label_frame, wrap=WORD, 
                                  yscrollcommand=symptoms_scroll.set,
-                                 font=("Arial", 10), bg='#fffef7', height=15, bd=0,
-                                 padx=10, pady=5)
+                                 font=("Arial", 11), bg='#fffef7', height=10, bd=0,
+                                 padx=12, pady=8)
         self.symptoms_text.pack(fill=BOTH, expand=True)
         symptoms_scroll.config(command=self.symptoms_text.yview)
         
         # Right column - Precautions
         right_frame = Frame(content_frame, bg='#ecf0f1')
-        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(5, 0))
+        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(8, 0))
         
         # Precautions Frame
         precautions_label_frame = LabelFrame(right_frame, text="💊 Precautions & Treatment", 
-                                           font=("Arial", 12, "bold"), bg='#ffffff',
-                                           fg='#2c3e50', padx=12, pady=12, relief=GROOVE, bd=2)
+                                           font=("Arial", 13, "bold"), bg='#ffffff',
+                                           fg='#2c3e50', padx=15, pady=15, relief=GROOVE, bd=2)
         precautions_label_frame.pack(fill=BOTH, expand=True)
         
         # Scrollbar for precautions
@@ -646,216 +696,239 @@ class DiseaseInfoApp:
         
         self.precautions_text = Text(precautions_label_frame, wrap=WORD,
                                     yscrollcommand=precautions_scroll.set,
-                                    font=("Arial", 10), bg='#f0fff4', height=10, bd=0,
-                                    padx=10, pady=5)
+                                    font=("Arial", 11), bg='#f0fff4', height=10, bd=0,
+                                    padx=12, pady=8)
         self.precautions_text.pack(fill=BOTH, expand=True)
         precautions_scroll.config(command=self.precautions_text.yview)
         
-
-        
-        # Map Section Frame (Main Feature at Bottom)
-        map_main_frame = Frame(self.root, bg='#ecf0f1', pady=10)
-        map_main_frame.pack(fill=X, padx=30, side=BOTTOM, before=results_frame)
+        # Map Section Frame - pack AFTER results
+        map_main_frame = Frame(scrollable_frame, bg='#ecf0f1', pady=8)
+        map_main_frame.pack(fill=X, padx=30)
         
         # Create prominent map container
-        map_container = Frame(map_main_frame, bg='#ffffff', bd=3, relief=GROOVE)
-        map_container.pack(fill=X, padx=5, pady=5)
+        map_container = Frame(map_main_frame, bg='#ffffff', bd=2, relief=GROOVE)
+        map_container.pack(fill=X, padx=8, pady=5)
         
         # Map header with prominent styling
-        map_header = Frame(map_container, bg='#2980b9', pady=12)
+        map_header = Frame(map_container, bg='#2980b9', pady=10)
         map_header.pack(fill=X)
         
         Label(map_header, text="🗺️ 🏥 Find Nearby Hospitals & Medical Shops", 
-              font=("Arial", 16, "bold"), bg='#2980b9', fg='white').pack()
+              font=("Arial", 14, "bold"), bg='#2980b9', fg='white').pack()
         
         Label(map_header, text="🟢 Green = Hospitals & Clinics  |  🔵 Blue = Medical Stores & Pharmacies", 
-              font=("Arial", 11), bg='#2980b9', fg='#ecf0f1').pack(pady=(5, 0))
+              font=("Arial", 10), bg='#2980b9', fg='#ecf0f1').pack(pady=(3, 0))
         
         # Map input area
-        map_input_frame = Frame(map_container, bg='#ffffff', pady=15)
-        map_input_frame.pack(fill=X, padx=20)
+        map_input_frame = Frame(map_container, bg='#ffffff', pady=12)
+        map_input_frame.pack(fill=X, padx=18)
         
         # Location input row
         location_row = Frame(map_input_frame, bg='#ffffff')
         location_row.pack(fill=X, pady=(0, 10))
         
-        Label(location_row, text="📍 Enter Location:", font=("Arial", 12, "bold"), 
+        Label(location_row, text="📍 Enter Location:", font=("Arial", 11, "bold"), 
               bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(0, 10))
         
         self.map_location_var = StringVar()
         self.map_location_entry = Entry(location_row, textvariable=self.map_location_var, 
-                                        width=30, font=("Arial", 11), bd=2, relief=SOLID)
-        self.map_location_entry.pack(side=LEFT, padx=5, ipady=4)
+                                        width=35, font=("Arial", 11), bd=2, relief=SOLID)
+        self.map_location_entry.pack(side=LEFT, padx=8, ipady=4)
         
         Label(location_row, text="(e.g., Mumbai, India or Chennai or Delhi)", 
               font=("Arial", 9, "italic"), bg='#ffffff', fg='#7f8c8d').pack(side=LEFT, padx=(10, 0))
         
         # Distance selection row
         distance_row = Frame(map_input_frame, bg='#ffffff')
-        distance_row.pack(fill=X, pady=(0, 15))
+        distance_row.pack(fill=X, pady=(0, 12))
         
-        Label(distance_row, text="📏 Search Radius:", font=("Arial", 12, "bold"), 
+        Label(distance_row, text="📏 Search Radius:", font=("Arial", 11, "bold"), 
               bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(0, 10))
         
         self.map_radius_var = StringVar(value="5")
         radius_dropdown = ttk.Combobox(distance_row, textvariable=self.map_radius_var, 
                                       values=["1", "2", "3", "5", "8", "10", "15", "20"], 
-                                      width=10, font=("Arial", 11), state='readonly')
-        radius_dropdown.pack(side=LEFT, padx=5)
+                                      width=8, font=("Arial", 11), state='readonly')
+        radius_dropdown.pack(side=LEFT, padx=8)
         
         Label(distance_row, text="kilometers", font=("Arial", 11), 
-              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(5, 20))
+              bg='#ffffff', fg='#2c3e50').pack(side=LEFT, padx=(8, 15))
         
         # Map action buttons
         map_btn = Button(distance_row, text="🗺️ Show Hospitals & Medical Shops", 
                         command=self.show_map_locations,
-                        bg='#27ae60', fg='white', font=("Arial", 12, "bold"),
-                        padx=20, pady=8, cursor='hand2', relief=RAISED, bd=3)
+                        bg='#27ae60', fg='white', font=("Arial", 11, "bold"),
+                        padx=15, pady=6, cursor='hand2', relief=RAISED, bd=2)
         map_btn.pack(side=LEFT, padx=10)
         
         open_existing_btn = Button(distance_row, text="📂 Open Last Map", 
                                   command=self.open_existing_map,
-                                  bg='#3498db', fg='white', font=("Arial", 12, "bold"),
-                                  padx=15, pady=8, cursor='hand2', relief=RAISED, bd=3)
-        open_existing_btn.pack(side=LEFT, padx=5)
+                                  bg='#3498db', fg='white', font=("Arial", 11, "bold"),
+                                  padx=12, pady=6, cursor='hand2', relief=RAISED, bd=2)
+        open_existing_btn.pack(side=LEFT, padx=8)
         
         # Map status label
         self.map_status_label = Label(map_container, text="", font=("Arial", 10, "italic"), 
                                      bg='#ffffff', fg='#e74c3c')
         self.map_status_label.pack(pady=(0, 10))
         
-        # Footer
-        footer_frame = Frame(self.root, bg='#34495e', height=30)
-        footer_frame.pack(fill=X, side=BOTTOM)
+        # Footer - pack LAST at the very end
+        footer_frame = Frame(scrollable_frame, bg='#34495e', height=35)
+        footer_frame.pack(fill=X)
         footer_frame.pack_propagate(False)
         
         footer_label = Label(footer_frame, text="⚕️ Stay Healthy, Stay Safe | Total Diseases Available: " + str(len(self.diseases)), 
-                           font=("Arial", 9), bg='#34495e', fg='white')
-        footer_label.pack(pady=6)
+                           font=("Arial", 10), bg='#34495e', fg='white')
+        footer_label.pack(pady=8)
     
     def show_disease_info(self):
-        disease_input = self.disease_var.get().strip()
-        
-        if not disease_input:
-            messagebox.showwarning("Warning", "Please enter or select a disease!")
-            return
-        
-        # Case-insensitive search
-        disease_lower = disease_input.lower()
-        
-        # Find the actual disease name (case-insensitive)
-        disease = None
-        if disease_lower in self.disease_map:
-            disease = self.disease_map[disease_lower]
-        else:
-            # Try partial matching
-            matches = [d for d in self.diseases if disease_lower in d.lower()]
-            if matches:
-                disease = matches[0]
-                # Ask user if this is what they meant
-                if len(matches) > 1:
-                    match_list = '\n'.join(matches[:5])
-                    result = messagebox.askyesno("Multiple Matches Found", 
-                                                f"Did you mean '{matches[0]}'?\n\nOther matches:\n{match_list}")
-                    if not result:
-                        return
-            else:
-                messagebox.showerror("Not Found", 
-                                   f"Disease '{disease_input}' not found!\n\n" +
-                                   "Please check spelling or select from dropdown.\n" +
-                                   f"Total {len(self.diseases)} diseases available.")
+        try:
+            disease_input = self.disease_var.get().strip()
+            
+            if not disease_input:
+                messagebox.showwarning("Warning", "Please enter or select a disease!")
                 return
-        
-        if disease not in self.disease_data:
-            messagebox.showerror("Error", "Disease data not available!")
+            
+            print(f"[DEBUG] Searching for disease: {disease_input}")
+            
+            # Case-insensitive search
+            disease_lower = disease_input.lower()
+            
+            # Find the actual disease name (case-insensitive)
+            disease = None
+            if disease_lower in self.disease_map:
+                disease = self.disease_map[disease_lower]
+                print(f"[DEBUG] Found exact match: {disease}")
+            else:
+                # Try partial matching
+                matches = [d for d in self.diseases if disease_lower in d.lower()]
+                if matches:
+                    disease = matches[0]
+                    print(f"[DEBUG] Found partial match: {disease}, total matches: {len(matches)}")
+                    # Ask user if this is what they meant
+                    if len(matches) > 1:
+                        match_list = '\n'.join(matches[:5])
+                        result = messagebox.askyesno("Multiple Matches Found", 
+                                                    f"Did you mean '{matches[0]}'?\n\nOther matches:\n{match_list}")
+                        if not result:
+                            print("[DEBUG] User declined suggestion")
+                            return
+                else:
+                    print(f"[DEBUG] No match found for: {disease_input}")
+                    messagebox.showerror("Not Found", 
+                                       f"Disease '{disease_input}' not found!\n\n" +
+                                       "Please check spelling or select from dropdown.\n" +
+                                       f"Total {len(self.diseases)} diseases available.")
+                    return
+            
+            if disease not in self.disease_data:
+                print(f"[DEBUG] Disease {disease} not in disease_data")
+                messagebox.showerror("Error", "Disease data not available!")
+                return
+            
+            print(f"[DEBUG] Proceeding to display data for: {disease}")
+            
+            # Store current disease
+            self.current_disease = disease
+            
+            # Clear previous results
+            self.clear_results()
+            print("[DEBUG] Cleared previous results")
+            
+            # Display disease name with success message
+            disease_display = disease
+            if self.output_language != 'en':
+                try:
+                    translated = GoogleTranslator(source='en', target=self.output_language).translate(disease)
+                    disease_display = f"{disease} ({translated})"
+                except:
+                    pass
+            
+            self.disease_name_label.config(text=f"✅ {disease_display}")
+            print(f"[DEBUG] Set disease name label: {disease_display}")
+            
+            # Get data
+            symptoms = self.disease_data[disease]['symptoms']
+            precautions = self.disease_data[disease]['precautions']
+            print(f"[DEBUG] Got {len(symptoms)} symptoms and {len(precautions)} precautions")
+            
+            # Display symptoms with better formatting and translation
+            self.symptoms_text.config(state=NORMAL)
+            
+            # Header
+            header_text = f"Total Symptoms Found: {len(symptoms)}"
+            if self.output_language != 'en':
+                try:
+                    translated = GoogleTranslator(source='en', target=self.output_language).translate(header_text)
+                    header_text = f"{header_text} ({translated})"
+                except:
+                    pass
+            
+            self.symptoms_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#16a085")
+            self.symptoms_text.insert(END, header_text + "\n", "header")
+            self.symptoms_text.insert(END, "─" * 60 + "\n\n")
+            
+            # Symptoms in columns with translation
+            for i, symptom in enumerate(symptoms, 1):
+                symptom_display = symptom
+                if self.output_language != 'en':
+                    try:
+                        translated = GoogleTranslator(source='en', target=self.output_language).translate(symptom)
+                        symptom_display = f"{symptom} ({translated})"
+                    except:
+                        pass
+                
+                self.symptoms_text.tag_config("bullet", foreground="#2980b9", font=("Arial", 11, "bold"))
+                self.symptoms_text.insert(END, "✓ ", "bullet")
+                self.symptoms_text.insert(END, f"{symptom_display}\n")
+            
+            self.symptoms_text.config(state=DISABLED)
+            
+            # Display precautions with better formatting and translation
+            self.precautions_text.config(state=NORMAL)
+            
+            # Header
+            precaution_header = "Important Precautions:"
+            if self.output_language != 'en':
+                try:
+                    translated = GoogleTranslator(source='en', target=self.output_language).translate(precaution_header)
+                    precaution_header = f"{precaution_header} ({translated})"
+                except:
+                    pass
+            
+            self.precautions_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#d35400")
+            self.precautions_text.insert(END, precaution_header + "\n", "header")
+            self.precautions_text.insert(END, "─" * 60 + "\n\n")
+            
+            for i, precaution in enumerate(precautions, 1):
+                precaution_display = precaution
+                if self.output_language != 'en':
+                    try:
+                        translated = GoogleTranslator(source='en', target=self.output_language).translate(precaution)
+                        precaution_display = f"{precaution} ({translated})"
+                    except:
+                        pass
+                
+                self.precautions_text.tag_config("number", foreground="#c0392b", font=("Arial", 11, "bold"))
+                self.precautions_text.insert(END, f"{i}. ", "number")
+                self.precautions_text.insert(END, f"{precaution_display}\n\n")
+            
+            self.precautions_text.config(state=DISABLED)
+            
+            # Store current disease
+            self.current_disease = disease
+            
+            # Enable Read Aloud button
+            self.read_aloud_btn.config(state=NORMAL)
+            
+            print(f"[DEBUG] Successfully displayed info for {disease}")
+            
+        except Exception as e:
+            print(f"[ERROR] Exception in show_disease_info: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
             return
-        
-        # Store current disease
-        self.current_disease = disease
-        
-        # Clear previous results
-        self.clear_results()
-        
-        # Display disease name with success message
-        disease_display = disease
-        if self.output_language != 'en':
-            try:
-                translated = self.translator.translate(disease, src='en', dest=self.output_language)
-                disease_display = f"{disease} ({translated.text})"
-            except:
-                pass
-        
-        self.disease_name_label.config(text=f"✅ {disease_display}")
-        
-        # Get data
-        symptoms = self.disease_data[disease]['symptoms']
-        precautions = self.disease_data[disease]['precautions']
-        
-        # Display symptoms with better formatting and translation
-        self.symptoms_text.config(state=NORMAL)
-        
-        # Header
-        header_text = f"Total Symptoms Found: {len(symptoms)}"
-        if self.output_language != 'en':
-            try:
-                translated = self.translator.translate(header_text, src='en', dest=self.output_language)
-                header_text = f"{header_text} ({translated.text})"
-            except:
-                pass
-        
-        self.symptoms_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#16a085")
-        self.symptoms_text.insert(END, header_text + "\n", "header")
-        self.symptoms_text.insert(END, "─" * 60 + "\n\n")
-        
-        # Symptoms in columns with translation
-        for i, symptom in enumerate(symptoms, 1):
-            symptom_display = symptom
-            if self.output_language != 'en':
-                try:
-                    translated = self.translator.translate(symptom, src='en', dest=self.output_language)
-                    symptom_display = f"{symptom} ({translated.text})"
-                except:
-                    pass
-            
-            self.symptoms_text.tag_config("bullet", foreground="#2980b9", font=("Arial", 11, "bold"))
-            self.symptoms_text.insert(END, "✓ ", "bullet")
-            self.symptoms_text.insert(END, f"{symptom_display}\n")
-        
-        self.symptoms_text.config(state=DISABLED)
-        
-        # Display precautions with better formatting and translation
-        self.precautions_text.config(state=NORMAL)
-        
-        # Header
-        precaution_header = "Important Precautions:"
-        if self.output_language != 'en':
-            try:
-                translated = self.translator.translate(precaution_header, src='en', dest=self.output_language)
-                precaution_header = f"{precaution_header} ({translated.text})"
-            except:
-                pass
-        
-        self.precautions_text.tag_config("header", font=("Arial", 12, "bold"), foreground="#d35400")
-        self.precautions_text.insert(END, precaution_header + "\n", "header")
-        self.precautions_text.insert(END, "─" * 60 + "\n\n")
-        
-        for i, precaution in enumerate(precautions, 1):
-            precaution_display = precaution
-            if self.output_language != 'en':
-                try:
-                    translated = self.translator.translate(precaution, src='en', dest=self.output_language)
-                    precaution_display = f"{precaution} ({translated.text})"
-                except:
-                    pass
-            
-            self.precautions_text.tag_config("number", foreground="#c0392b", font=("Arial", 11, "bold"))
-            self.precautions_text.insert(END, f"{i}. ", "number")
-            self.precautions_text.insert(END, f"{precaution_display}\n\n")
-        
-        self.precautions_text.config(state=DISABLED)
-        
-        # Store current disease
-        self.current_disease = disease
     
     def clear_results(self):
         self.disease_name_label.config(text="")
@@ -867,41 +940,53 @@ class DiseaseInfoApp:
         self.precautions_text.config(state=DISABLED)
         self.current_disease = None
         self.status_label.config(text="")
+        # Disable Read Aloud button
+        self.read_aloud_btn.config(state=DISABLED)
+        self.stop_reading_btn.config(state=DISABLED)
     
     def predict_disease_from_symptoms(self):
         """Predict diseases based on entered symptoms"""
-        symptom_input = self.symptom_input_var.get().strip()
-        
-        if not symptom_input:
-            messagebox.showwarning("Warning", "Please enter at least one symptom!")
-            self.symptom_entry.focus()
-            return
-        
-        # Parse input symptoms
-        input_symptoms = [s.strip().lower() for s in symptom_input.split(',')]
-        
-        # Get all symptom columns from dataset
-        symptom_cols = [col for col in self.training_dataset.columns if col != 'prognosis']
-        
-        # Normalize symptom column names (replace _ with space)
-        symptom_col_map = {col.replace('_', ' ').lower(): col for col in symptom_cols}
-        
-        # Match input symptoms to dataset columns
-        matched_symptoms = []
-        unmatched_symptoms = []
-        
-        for inp_symptom in input_symptoms:
-            # Try exact match first
-            if inp_symptom in symptom_col_map:
-                matched_symptoms.append(symptom_col_map[inp_symptom])
-            else:
-                # Try partial matching
-                partial_matches = [col for col_name, col in symptom_col_map.items() 
-                                 if inp_symptom in col_name or col_name in inp_symptom]
-                if partial_matches:
-                    matched_symptoms.append(partial_matches[0])
+        try:
+            symptom_input = self.symptom_input_var.get().strip()
+            
+            if not symptom_input:
+                messagebox.showwarning("Warning", "Please enter at least one symptom!")
+                self.symptom_entry.focus()
+                return
+            
+            print(f"[DEBUG] Predicting disease for symptoms: {symptom_input}")
+            
+            # Parse input symptoms
+            input_symptoms = [s.strip().lower() for s in symptom_input.split(',')]
+            
+            # Get all symptom columns from dataset
+            symptom_cols = [col for col in self.training_dataset.columns if col != 'prognosis']
+            
+            # Normalize symptom column names (replace _ with space)
+            symptom_col_map = {col.replace('_', ' ').lower(): col for col in symptom_cols}
+            
+            # Match input symptoms to dataset columns
+            matched_symptoms = []
+            unmatched_symptoms = []
+            
+            for inp_symptom in input_symptoms:
+                # Try exact match first
+                if inp_symptom in symptom_col_map:
+                    matched_symptoms.append(symptom_col_map[inp_symptom])
                 else:
-                    unmatched_symptoms.append(inp_symptom)
+                    # Try partial matching
+                    partial_matches = [col for col_name, col in symptom_col_map.items() 
+                                     if inp_symptom in col_name or col_name in inp_symptom]
+                    if partial_matches:
+                        matched_symptoms.append(partial_matches[0])
+                    else:
+                        unmatched_symptoms.append(inp_symptom)
+        except Exception as e:
+            print(f"[ERROR] Exception in predict_disease_from_symptoms: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+            return
         
         if not matched_symptoms:
             messagebox.showerror("No Match", 
@@ -1106,6 +1191,9 @@ class DiseaseInfoApp:
                                         "disclaimer")
             
             self.precautions_text.config(state=DISABLED)
+            
+            # Enable Read Aloud button for prediction results
+            self.read_aloud_btn.config(state=NORMAL)
     
     def on_language_change(self, event=None):
         """Handle language change"""
@@ -1114,6 +1202,68 @@ class DiseaseInfoApp:
         # Re-display current results if any
         if hasattr(self, 'current_disease') and self.current_disease:
             self.show_disease_info()
+    
+    def read_aloud_results(self):
+        """Read aloud the symptoms and precautions using text-to-speech"""
+        if not self.tts_engine:
+            messagebox.showerror("Error", "Text-to-speech engine is not available!")
+            return
+        
+        if self.is_speaking:
+            messagebox.showinfo("Info", "Already reading. Please stop first.")
+            return
+        
+        # Get the text content from both text widgets
+        symptoms_text = self.symptoms_text.get(1.0, END).strip()
+        precautions_text = self.precautions_text.get(1.0, END).strip()
+        
+        if not symptoms_text and not precautions_text:
+            messagebox.showwarning("Warning", "No content to read!")
+            return
+        
+        # Combine the text
+        full_text = ""
+        if hasattr(self, 'current_disease') and self.current_disease:
+            full_text = f"Disease Information for {self.current_disease}.\n\n"
+        
+        if symptoms_text:
+            full_text += "Symptoms:\n" + symptoms_text + "\n\n"
+        
+        if precautions_text:
+            full_text += "Precautions and Treatment:\n" + precautions_text
+        
+        # Start reading in a separate thread to avoid freezing UI
+        def speak():
+            try:
+                self.is_speaking = True
+                self.read_aloud_btn.config(state=DISABLED)
+                self.stop_reading_btn.config(state=NORMAL)
+                
+                self.tts_engine.say(full_text)
+                self.tts_engine.runAndWait()
+                
+                self.is_speaking = False
+                self.root.after(0, lambda: self.read_aloud_btn.config(state=NORMAL))
+                self.root.after(0, lambda: self.stop_reading_btn.config(state=DISABLED))
+            except Exception as e:
+                self.is_speaking = False
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Error reading aloud: {str(e)}"))
+                self.root.after(0, lambda: self.read_aloud_btn.config(state=NORMAL))
+                self.root.after(0, lambda: self.stop_reading_btn.config(state=DISABLED))
+        
+        thread = threading.Thread(target=speak, daemon=True)
+        thread.start()
+    
+    def stop_reading(self):
+        """Stop the text-to-speech reading"""
+        if self.tts_engine and self.is_speaking:
+            try:
+                self.tts_engine.stop()
+                self.is_speaking = False
+                self.read_aloud_btn.config(state=NORMAL)
+                self.stop_reading_btn.config(state=DISABLED)
+            except Exception as e:
+                messagebox.showerror("Error", f"Error stopping speech: {str(e)}")
     
 
     
@@ -1195,11 +1345,13 @@ class DiseaseInfoApp:
                 text=f"📍 Location found! Searching for hospitals & medical shops within {radius_km} km...", 
                 fg='#27ae60'))
             
-            # Create folium map
+            # Create folium map with explicit dimensions
             map_obj = folium.Map(
                 location=[lat, lon],
                 zoom_start=13,
-                tiles='OpenStreetMap'
+                tiles='OpenStreetMap',
+                width='100%',
+                height='100%'
             )
             
             # Add marker for user location
@@ -1270,6 +1422,46 @@ class DiseaseInfoApp:
             # Save map to HTML file
             map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nearby_places_map.html')
             map_obj.save(map_file)
+            
+            # Fix the HTML file to ensure proper display in all browsers
+            with open(map_file, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            
+            # Ensure viewport meta tag and proper styling
+            if '<meta name="viewport"' not in html_content:
+                html_content = html_content.replace(
+                    '<head>',
+                    '<head>\n    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />'
+                )
+            
+            # Add comprehensive CSS to ensure full-screen display
+            additional_css = """
+            <style>
+                html, body {
+                    width: 100%;
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
+                }
+                .folium-map {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                }
+            </style>
+            """
+            
+            if additional_css not in html_content:
+                html_content = html_content.replace('</head>', f'{additional_css}\n</head>')
+            
+            # Write the fixed HTML back
+            with open(map_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
             
             # Update status
             self.root.after(0, lambda: self.map_status_label.config(
